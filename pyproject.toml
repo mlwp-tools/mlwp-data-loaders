@@ -39,4 +39,4 @@ where = ["src"]
 testpaths = ["tests"]
 
 [tool.uv.sources]
-mlwp-data-specs = { path = "../mlwp-data-specs", editable = true }
+mlwp-data-specs = { git = "https://github.com/mlwp-tools/mlwp-data-specs", rev = "1aafd6b" }
