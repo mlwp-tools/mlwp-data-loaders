@@ -6,8 +6,6 @@ from typing import Any
 
 import xarray as xr
 
-from mlwp_data_specs import validate_dataset
-
 from .core import import_loader_hooks, open_with_loader, validate_loader_profiles
 
 
@@ -55,51 +53,3 @@ def load_dataset(
         hooks=hooks,
         storage_options=storage_options,
     )
-
-
-def load_and_validate_dataset(
-    dataset_path: str | list[str],
-    *,
-    loader: str,
-    time: str | None = None,
-    space: str | None = None,
-    uncertainty: str | None = None,
-    storage_options: dict[str, Any] | None = None,
-):
-    """Load a dataset through a loader module and validate it.
-
-    Parameters
-    ----------
-    dataset_path : str | list[str]
-        One path or a list of paths to source datasets.
-    loader : str
-        Loader module reference.
-    time : str | None, optional
-        Time trait selector.
-    space : str | None, optional
-        Space trait selector.
-    uncertainty : str | None, optional
-        Uncertainty trait selector.
-    storage_options : dict[str, Any] | None, optional
-        Storage options forwarded to :func:`xarray.open_dataset`.
-
-    Returns
-    -------
-    tuple[xr.Dataset | xr.DataArray, object]
-        Loaded dataset and validation report.
-    """
-    ds = load_dataset(
-        dataset_path,
-        loader=loader,
-        time=time,
-        space=space,
-        uncertainty=uncertainty,
-        storage_options=storage_options,
-    )
-    report = validate_dataset(
-        ds,
-        time=time,
-        space=space,
-        uncertainty=uncertainty,
-    )
-    return ds, report

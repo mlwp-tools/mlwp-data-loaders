@@ -5,6 +5,9 @@ from __future__ import annotations
 import pytest
 import xarray as xr
 
+from mlwp_data_specs.specs.reporting import ValidationReport
+
+import mlwp_data_loaders.mxalign_api as mxalign_api
 from mlwp_data_loaders.api import load_dataset
 from mlwp_data_loaders.core import import_loader_hooks
 
@@ -86,3 +89,17 @@ def test_load_dataset_requires_concat_dim_for_multiple_inputs(
 
     with pytest.raises(ValueError, match="Loader must define 'concat_dim'"):
         load_dataset(["a.nc", "b.nc"], loader=str(loader_file), time="forecast")
+
+
+def test_validate_dataset_with_mxalign_returns_fail_report_for_invalid_dims() -> None:
+    """mxalign validation failures are converted into report entries."""
+    report = mxalign_api.validate_dataset_with_mxalign(
+        _forecast_grid_ds(),
+        time="observation",
+        space="point",
+        uncertainty="deterministic",
+    )
+
+    assert report.has_fails()
+    assert len(report.results) == 1
+    assert report.results[0].section == "MXAlign Properties"

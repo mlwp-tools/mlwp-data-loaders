@@ -7,7 +7,7 @@ This project uses `uv` for dependency management and local commands.
 Install dependencies into the project environment with:
 
 ```bash
-uv sync --extra test --extra dev
+uv sync --extra test --group dev
 ```
 
 If you only need to run a one-off command, you can also use `uv run ...`
@@ -36,7 +36,7 @@ CI runs the same hooks via `.github/workflows/pre-commit.yml`.
 Install the development dependencies first:
 
 ```bash
-uv sync --extra test --extra dev
+uv sync --extra test --group dev
 ```
 
 Then run the hooks locally with:

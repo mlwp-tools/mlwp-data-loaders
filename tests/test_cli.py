@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import xarray as xr
+from mlwp_data_specs.specs.reporting import ValidationReport
 from pytest import MonkeyPatch
 
 from mlwp_data_loaders import cli
@@ -45,19 +46,17 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
     """CLI passes multiple dataset paths through to the load/validate API."""
     observed: dict[str, object] = {}
 
-    def _load_and_validate(dataset_path, **kwargs):
+    def _load_dataset(dataset_path, **kwargs):
         observed["dataset_path"] = dataset_path
+        return _forecast_grid_ds()
 
-        class _Report:
-            def console_print(self):
-                return None
-
-            def has_fails(self):
-                return False
-
-        return _forecast_grid_ds(), _Report()
-
-    monkeypatch.setattr(cli, "load_and_validate_dataset", _load_and_validate)
+    report = ValidationReport()
+    report.add("Specs", "dummy", "PASS")
+    monkeypatch.setattr(cli, "load_dataset", _load_dataset)
+    monkeypatch.setattr(cli, "validate_dataset", lambda *args, **kwargs: report)
+    monkeypatch.setattr(
+        cli, "validate_dataset_with_mxalign", lambda *args, **kwargs: ValidationReport()
+    )
 
     code = cli.main(
         [

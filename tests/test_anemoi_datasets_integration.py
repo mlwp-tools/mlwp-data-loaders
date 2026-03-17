@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
-from mlwp_data_loaders.api import load_and_validate_dataset
+from mlwp_data_specs import validate_dataset
+
+from mlwp_data_loaders.api import load_dataset
+from mlwp_data_loaders.mxalign_api import validate_dataset_with_mxalign
 
 # Use small CERRA sample dataset stored on EWC (European Weather Cloud)
 # S3-compatible object store for testing.
@@ -21,13 +24,24 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
         "anon": True,
     }
 
-    _, report = load_and_validate_dataset(
+    ds = load_dataset(
         DATASET_PATH,
         loader=LOADER,
+        storage_options=storage_options,
+    )
+    report = validate_dataset(
+        ds,
         time="observation",
         space="point",
         uncertainty="deterministic",
-        storage_options=storage_options,
+    )
+    report += validate_dataset_with_mxalign(
+        ds,
+        time="observation",
+        space="point",
+        uncertainty="deterministic",
     )
 
+    if report.has_fails():
+        report.console_print()
     assert not report.has_fails()

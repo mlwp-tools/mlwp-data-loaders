@@ -7,12 +7,14 @@ from collections.abc import Sequence
 
 from loguru import logger
 
+from mlwp_data_specs import validate_dataset
 from mlwp_data_specs import __version__ as specs_version
 from mlwp_data_specs.specs.traits.spatial_coordinate import Space
 from mlwp_data_specs.specs.traits.time_coordinate import Time
 from mlwp_data_specs.specs.traits.uncertainty import Uncertainty
 
-from .api import load_and_validate_dataset
+from .api import load_dataset
+from .mxalign_api import validate_dataset_with_mxalign
 
 
 def _choice_values(enum_cls) -> list[str]:
@@ -78,13 +80,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     dataset_input = args.dataset_paths[0] if len(args.dataset_paths) == 1 else args.dataset_paths
 
     logger.info(f"Using mlwp-data-specs {specs_version}")
-    _, report = load_and_validate_dataset(
+    ds = load_dataset(
         dataset_input,
         loader=args.loader,
         time=args.time,
         space=args.space,
         uncertainty=args.uncertainty,
         storage_options=storage_options or None,
+    )
+    report = validate_dataset(
+        ds,
+        time=args.time,
+        space=args.space,
+        uncertainty=args.uncertainty,
+    )
+    report += validate_dataset_with_mxalign(
+        ds,
+        time=args.time,
+        space=args.space,
+        uncertainty=args.uncertainty,
     )
     report.console_print()
     return 1 if report.has_fails() else 0

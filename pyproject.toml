@@ -23,9 +23,6 @@ test = [
   "pytest>=8.0.0",
   "certifi>=2021.10.8",
 ]
-dev = [
-  "pre-commit>=4.0.0",
-]
 
 [project.scripts]
 "mlwp.load_and_validate_dataset" = "mlwp_data_loaders.cli:main"
@@ -40,4 +37,11 @@ where = ["src"]
 testpaths = ["tests"]
 
 [tool.uv.sources]
-mlwp-data-specs = { git = "https://github.com/mlwp-tools/mlwp-data-specs" }
+mlwp-data-specs = { git = "https://github.com/mlwp-tools/mlwp-data-specs", rev = "1aafd6b" }
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0.0",
+    "ipython>=9.11.0",
+    "pytest>=9.0.2",
+]
