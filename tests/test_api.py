@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import pytest
 import xarray as xr
-from mlwp_data_specs.specs.reporting import ValidationReport
 
 import mlwp_data_loaders.mxalign_api as mxalign_api
 from mlwp_data_loaders.api import load_dataset

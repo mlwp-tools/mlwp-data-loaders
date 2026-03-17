@@ -18,6 +18,9 @@ dependencies = [
   "mlwp-data-specs",
 ]
 
+[tool.isort]
+profile = "black"
+
 [project.optional-dependencies]
 test = [
   "pytest>=8.0.0",
