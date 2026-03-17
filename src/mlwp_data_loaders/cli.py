@@ -6,7 +6,6 @@ import argparse
 from collections.abc import Sequence
 
 from loguru import logger
-
 from mlwp_data_specs import __version__ as specs_version
 from mlwp_data_specs.specs.traits.spatial_coordinate import Space
 from mlwp_data_specs.specs.traits.time_coordinate import Time
@@ -75,7 +74,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.s3_anon:
         storage_options["anon"] = True
 
-    dataset_input = args.dataset_paths[0] if len(args.dataset_paths) == 1 else args.dataset_paths
+    dataset_input = (
+        args.dataset_paths[0] if len(args.dataset_paths) == 1 else args.dataset_paths
+    )
 
     logger.info(f"Using mlwp-data-specs {specs_version}")
     _, report = load_and_validate_dataset(

@@ -39,7 +39,9 @@ def test_import_loader_hooks_defaults_from_module(tmp_path) -> None:
     assert import_loader_hooks(str(loader_file)) == {}
 
 
-def test_load_dataset_uses_loader_hooks(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_load_dataset_uses_loader_hooks(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Datasets are opened through the configured loader module."""
     loader_file = tmp_path / "loader_hooks.py"
     loader_file.write_text(

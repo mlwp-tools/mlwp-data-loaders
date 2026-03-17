@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 import xarray as xr
-
 from mlwp_data_specs import validate_dataset
 
 from .core import import_loader_hooks, open_with_loader, validate_loader_profiles
