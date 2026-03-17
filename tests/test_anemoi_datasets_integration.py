@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-import numpy as np
-import pytest
-import xarray as xr
-
-from mlwp_data_loaders.api import load_dataset
+from mlwp_data_loaders.api import load_and_validate_dataset
 
 # Use small CERRA sample dataset stored on EWC (European Weather Cloud)
 # S3-compatible object store for testing.
@@ -19,47 +15,19 @@ LOADER = "mlwp_data_loaders.loaders.anemoi.anemoi_datasets"
 
 
 def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
-    """The anemoi-datasets loader can open the sample Zarr store from S3."""
+    """The anemoi-datasets loader can open and validate the sample Zarr store."""
     storage_options: dict[str, object] = {
         "endpoint_url": ENDPOINT_URL,
         "anon": True,
     }
 
-    try:
-        ds = load_dataset(
-            DATASET_PATH,
-            loader=LOADER,
-            storage_options=storage_options,
-        )
-    except Exception as exc:  # pragma: no cover - environment-dependent fallback
-        reason = f"{exc.__class__.__module__}.{exc.__class__.__name__}: {exc}"
-        known_access_failures = (
-            "AccessDenied",
-            "CERTIFICATE_VERIFY_FAILED",
-            "Cannot connect to host",
-            "SSL validation failed",
-            "Temporary failure in name resolution",
-            "Unable to locate credentials",
-        )
-        if exc.__class__.__name__ in {
-            "ClientConnectorCertificateError",
-            "NoCredentialsError",
-            "PermissionError",
-        } or any(token in str(exc) for token in known_access_failures):
-            pytest.skip(f"S3 integration environment unavailable: {reason}")
-        raise
+    _, report = load_and_validate_dataset(
+        DATASET_PATH,
+        loader=LOADER,
+        time="observation",
+        space="point",
+        uncertainty="deterministic",
+        storage_options=storage_options,
+    )
 
-    assert isinstance(ds, xr.Dataset)
-    assert "valid_time" in ds.dims
-    assert "grid_index" in ds.dims
-    assert ds.sizes["valid_time"] > 0
-    assert ds.sizes["grid_index"] > 0
-    assert "ensemble" not in ds.dims
-    assert "variable" not in ds.dims
-    assert "time" not in ds.dims
-    assert {"latitude", "longitude", "valid_time"} <= set(ds.coords)
-    assert np.issubdtype(ds.coords["valid_time"].dtype, np.datetime64)
-    assert ds.coords["latitude"].dtype == np.float32
-    assert ds.coords["longitude"].dtype == np.float32
-    assert "data" not in ds.data_vars
-    assert len(ds.data_vars) > 0
+    assert not report.has_fails()
