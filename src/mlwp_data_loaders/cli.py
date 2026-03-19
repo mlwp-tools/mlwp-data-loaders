@@ -7,16 +7,10 @@ from collections.abc import Sequence
 
 from loguru import logger
 from mlwp_data_specs import __version__ as specs_version
-from mlwp_data_specs.specs.traits.spatial_coordinate import Space
-from mlwp_data_specs.specs.traits.time_coordinate import Time
-from mlwp_data_specs.specs.traits.uncertainty import Uncertainty
+from mlwp_data_specs.api import validate_dataset
 
-from .api import load_and_validate_dataset
-
-
-def _choice_values(enum_cls) -> list[str]:
-    """List sorted enum values for CLI choices."""
-    return sorted(item.value for item in enum_cls)
+from .api import load_dataset
+from .core import import_loader_hooks
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,15 +32,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Loader module or .py script defining the loader hooks",
     )
     parser.add_argument(
-        "--space", choices=_choice_values(Space), help="Space trait name"
-    )
-    parser.add_argument("--time", choices=_choice_values(Time), help="Time trait name")
-    parser.add_argument(
-        "--uncertainty",
-        choices=_choice_values(Uncertainty),
-        help="Uncertainty trait name",
-    )
-    parser.add_argument(
         "--s3-endpoint-url",
         default=None,
         help="Optional S3 endpoint URL for opening the dataset",
@@ -63,11 +48,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    if not any([args.space, args.time, args.uncertainty]):
-        parser.error(
-            "At least one trait must be selected with --space/--time/--uncertainty"
-        )
-
     storage_options = {}
     if args.s3_endpoint_url:
         storage_options["endpoint_url"] = args.s3_endpoint_url
@@ -79,14 +59,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
 
     logger.info(f"Using mlwp-data-specs {specs_version}")
-    _, report = load_and_validate_dataset(
+
+    # Load the dataset
+    ds = load_dataset(
         dataset_input,
         loader=args.loader,
-        time=args.time,
-        space=args.space,
-        uncertainty=args.uncertainty,
         storage_options=storage_options or None,
     )
+
+    # Re-run validation to get the report for printing
+    hooks = import_loader_hooks(args.loader)
+    report = validate_dataset(
+        ds,
+        time=hooks.get("time_profile"),
+        space=hooks.get("space_profile"),
+        uncertainty=hooks.get("uncertainty_profile"),
+    )
+
     report.console_print()
     return 1 if report.has_fails() else 0
 

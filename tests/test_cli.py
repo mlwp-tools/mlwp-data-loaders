@@ -31,33 +31,34 @@ def _forecast_grid_ds() -> xr.Dataset:
     return ds
 
 
-def test_cli_requires_trait_selector() -> None:
-    """CLI exits with parser error when no trait selector is provided."""
-    try:
-        cli.main(["a.nc", "--loader", "some.module"])
-    except SystemExit as exc:
-        assert exc.code != 0
-    else:
-        raise AssertionError("Expected parser error")
-
-
 def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
     """CLI passes multiple dataset paths through to the load/validate API."""
     observed: dict[str, object] = {}
 
-    def _load_and_validate(dataset_path, **kwargs):
+    def _load_dataset(dataset_path, **kwargs):
         observed["dataset_path"] = dataset_path
+        return _forecast_grid_ds()
 
-        class _Report:
-            def console_print(self):
-                return None
+    def _import_loader_hooks(loader):
+        return {
+            "time_profile": "forecast",
+            "space_profile": "grid",
+            "uncertainty_profile": "deterministic",
+        }
 
-            def has_fails(self):
-                return False
+    class _Report:
+        def console_print(self):
+            return None
 
-        return _forecast_grid_ds(), _Report()
+        def has_fails(self):
+            return False
 
-    monkeypatch.setattr(cli, "load_and_validate_dataset", _load_and_validate)
+    def _validate_dataset(ds, **kwargs):
+        return _Report()
+
+    monkeypatch.setattr(cli, "load_dataset", _load_dataset)
+    monkeypatch.setattr(cli, "import_loader_hooks", _import_loader_hooks)
+    monkeypatch.setattr(cli, "validate_dataset", _validate_dataset)
 
     code = cli.main(
         [
@@ -65,10 +66,6 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
             "b.nc",
             "--loader",
             "mlwp_data_loaders.loaders.anemoi.anemoi_inference",
-            "--space",
-            "grid",
-            "--time",
-            "forecast",
         ]
     )
 
