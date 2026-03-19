@@ -11,10 +11,17 @@ from mlwp_data_specs.api import validate_dataset
 
 from .api import load_dataset
 from .core import get_dataset_traits_from_loader
+from .mxalign_api import validate_dataset_with_mxalign
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the CLI argument parser."""
+    """Build the CLI argument parser.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        The configured argument parser.
+    """
     parser = argparse.ArgumentParser(
         description=(
             "Load a dataset through a loader module and validate it with "
@@ -44,7 +51,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 @logger.catch
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run dataset loading and validation from CLI arguments."""
+    """Run dataset loading and validation from CLI arguments.
+
+    Parameters
+    ----------
+    argv : Sequence[str] | None, optional
+        Command line arguments. Defaults to None, which uses sys.argv[1:].
+
+    Returns
+    -------
+    int
+        Exit code: 0 for success, 1 for validation failures.
+    """
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -69,11 +87,23 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     # Re-run validation to get the report for printing
     traits = get_dataset_traits_from_loader(args.loader)
+
+    time_profile = traits.get("time_profile")
+    space_profile = traits.get("space_profile")
+    uncertainty_profile = traits.get("uncertainty_profile")
+
     report = validate_dataset(
         ds,
-        time=traits.get("time_profile"),
-        space=traits.get("space_profile"),
-        uncertainty=traits.get("uncertainty_profile"),
+        time=time_profile,
+        space=space_profile,
+        uncertainty=uncertainty_profile,
+    )
+
+    report += validate_dataset_with_mxalign(
+        ds,
+        time=time_profile,
+        space=space_profile,
+        uncertainty=uncertainty_profile,
     )
 
     report.console_print()

@@ -14,4 +14,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run tests
-        run: uv run python -m pytest
+        run: uv run --extra test python -m pytest

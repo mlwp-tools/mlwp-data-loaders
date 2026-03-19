@@ -9,13 +9,13 @@ description = "Loader package for opening datasets before mlwp-data-specs valida
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "xarray",
+  "loguru",
+  "fsspec",
+  "s3fs",
+  "zarr>2,<3",
+  "h5netcdf",
   "mlwp-data-specs",
-  "xarray>=2024.1.0",
-  "loguru>=0.7.0",
-  "fsspec>=2024.2.0",
-  "s3fs>=2024.2.0",
-  "zarr>=3.1.5",
-  "h5netcdf>=1.3.0",
 ]
 
 [tool.isort]
@@ -24,6 +24,7 @@ profile = "black"
 [project.optional-dependencies]
 test = [
   "pytest>=8.0.0",
+  "certifi>=2021.10.8",
 ]
 
 [project.scripts]
@@ -39,4 +40,15 @@ where = ["src"]
 testpaths = ["tests"]
 
 [tool.uv.sources]
-mlwp-data-specs = { git = "https://github.com/mlwp-tools/mlwp-data-specs", rev = "1aafd6b" }
+mlwp-data-specs = { git = "https://github.com/mlwp-tools/mlwp-data-specs", rev = "3a7529b" }
+mxalign = { git = "https://github.com/mlwp-tools/mxalign", rev = "e2232d93275c7508897a7ddb0cce8b508665f24c" }
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0.0",
+    "ipython>=9.11.0",
+    "pytest>=9.0.2",
+]
+test = [
+    "mxalign",
+]

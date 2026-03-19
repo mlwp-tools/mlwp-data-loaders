@@ -47,11 +47,17 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
         }
 
     class _Report:
+        def __init__(self):
+            self.fails = False
+
         def console_print(self):
             return None
 
         def has_fails(self):
-            return False
+            return self.fails
+
+        def __iadd__(self, other):
+            return self
 
     def _validate_dataset(ds, **kwargs):
         return _Report()
@@ -61,6 +67,9 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
         cli, "get_dataset_traits_from_loader", _get_dataset_traits_from_loader
     )
     monkeypatch.setattr(cli, "validate_dataset", _validate_dataset)
+    monkeypatch.setattr(
+        cli, "validate_dataset_with_mxalign", lambda *args, **kwargs: _Report()
+    )
 
     code = cli.main(
         [
