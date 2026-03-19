@@ -8,7 +8,7 @@ from pathlib import Path
 from types import ModuleType
 from typing import Any
 
-LoaderHooks = dict[str, Any]
+DatasetTraits = dict[str, Any]
 
 
 def _load_module(loader: str) -> ModuleType:
@@ -45,8 +45,8 @@ def _load_module(loader: str) -> ModuleType:
     )
 
 
-def import_loader_hooks(loader: str) -> LoaderHooks:
-    """Import hooks from a loader module.
+def get_dataset_traits_from_loader(loader: str) -> DatasetTraits:
+    """Import traits from a loader module.
 
     Parameters
     ----------
@@ -55,8 +55,8 @@ def import_loader_hooks(loader: str) -> LoaderHooks:
 
     Returns
     -------
-    LoaderHooks
-        Mapping with hook names normalized to lowercase.
+    DatasetTraits
+        Mapping with trait names normalized to lowercase.
 
     Raises
     ------
@@ -64,21 +64,21 @@ def import_loader_hooks(loader: str) -> LoaderHooks:
         If the loader module does not define a 'load_dataset' function.
     """
     module = _load_module(loader)
-    hooks: LoaderHooks = {}
+    traits: DatasetTraits = {}
 
     if not hasattr(module, "load_dataset"):
         raise ValueError(
             f"Loader module {loader!r} must define a 'load_dataset' function."
         )
-    hooks["load_dataset"] = module.load_dataset
+    traits["load_dataset"] = module.load_dataset
 
-    supported_hooks = (
+    supported_traits = (
         "TIME_PROFILE",
         "SPACE_PROFILE",
         "UNCERTAINTY_PROFILE",
     )
-    for name in supported_hooks:
+    for name in supported_traits:
         if hasattr(module, name):
-            hooks[name.lower()] = getattr(module, name)
+            traits[name.lower()] = getattr(module, name)
 
-    return hooks
+    return traits

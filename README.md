@@ -8,7 +8,7 @@ Loader package for opening source datasets before validating them with
 `mlwp-data-loaders` is responsible for:
 
 1. importing a loader module or script
-2. opening one or more source datasets using loader-defined hooks
+2. opening one or more source datasets using loader-defined traits
 3. optionally checking that the chosen trait profiles are compatible with the loader
 4. returning an `xarray.Dataset` that can then be validated with `mlwp-data-specs`
 

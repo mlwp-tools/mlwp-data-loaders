@@ -10,7 +10,7 @@ from mlwp_data_specs import __version__ as specs_version
 from mlwp_data_specs.api import validate_dataset
 
 from .api import load_dataset
-from .core import import_loader_hooks
+from .core import get_dataset_traits_from_loader
 from .mxalign_api import validate_dataset_with_mxalign
 
 
@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--loader",
         required=True,
-        help="Loader module or .py script defining the loader hooks",
+        help="Loader module or .py script defining the loader traits",
     )
     parser.add_argument(
         "--s3-endpoint-url",
@@ -69,11 +69,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
 
     # Re-run validation to get the report for printing
-    hooks = import_loader_hooks(args.loader)
+    traits = get_dataset_traits_from_loader(args.loader)
 
-    time_profile = hooks.get("time_profile")
-    space_profile = hooks.get("space_profile")
-    uncertainty_profile = hooks.get("uncertainty_profile")
+    time_profile = traits.get("time_profile")
+    space_profile = traits.get("space_profile")
+    uncertainty_profile = traits.get("uncertainty_profile")
 
     report = validate_dataset(
         ds,
