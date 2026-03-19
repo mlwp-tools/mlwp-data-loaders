@@ -34,19 +34,22 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
 
     traits = get_dataset_traits_from_loader(LOADER)
 
-    report = validate_dataset(
+    report_specs = validate_dataset(
         ds,
         time=traits.get("time_profile"),
         space=traits.get("space_profile"),
         uncertainty=traits.get("uncertainty_profile"),
     )
-    report += validate_dataset_with_mxalign(
-        ds,
-        time=traits.get("time_profile"),
-        space=traits.get("space_profile"),
-        uncertainty=traits.get("uncertainty_profile"),
-    )
+    if report_specs.has_fails():
+        report_specs.console_print()
+    assert not report_specs.has_fails()
 
-    if report.has_fails():
-        report.console_print()
-    assert not report.has_fails()
+    report_mxalign = validate_dataset_with_mxalign(
+        ds,
+        time=traits.get("time_profile"),
+        space=traits.get("space_profile"),
+        uncertainty=traits.get("uncertainty_profile"),
+    )
+    if report_mxalign.has_fails():
+        report_mxalign.console_print()
+    assert not report_mxalign.has_fails()
