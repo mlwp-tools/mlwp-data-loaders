@@ -110,4 +110,13 @@ def _postprocess(dataset: xr.Dataset) -> xr.Dataset:
         .swap_dims({"time": "valid_time"})
         .rename({"cell": "grid_index"})
     )
+
+    ds_pruned.coords["valid_time"].attrs["standard_name"] = "time"
+    ds_pruned.coords["latitude"].attrs.update(
+        {"standard_name": "latitude", "units": "degrees_north"}
+    )
+    ds_pruned.coords["longitude"].attrs.update(
+        {"standard_name": "longitude", "units": "degrees_east"}
+    )
+
     return ds_pruned  # type: ignore
