@@ -39,7 +39,7 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
         observed["dataset_path"] = dataset_path
         return _forecast_grid_ds()
 
-    def _import_loader_hooks(loader):
+    def _get_dataset_traits_from_loader(loader):
         return {
             "time_profile": "forecast",
             "space_profile": "grid",
@@ -57,7 +57,9 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
         return _Report()
 
     monkeypatch.setattr(cli, "load_dataset", _load_dataset)
-    monkeypatch.setattr(cli, "import_loader_hooks", _import_loader_hooks)
+    monkeypatch.setattr(
+        cli, "get_dataset_traits_from_loader", _get_dataset_traits_from_loader
+    )
     monkeypatch.setattr(cli, "validate_dataset", _validate_dataset)
 
     code = cli.main(

@@ -8,7 +8,7 @@ from typing import Any
 import xarray as xr
 from mlwp_data_specs import validate_dataset
 
-from .core import import_loader_hooks
+from .core import get_dataset_traits_from_loader
 
 
 def load_dataset(
@@ -38,9 +38,9 @@ def load_dataset(
     xr.Dataset
         Loaded and validated dataset.
     """
-    hooks = import_loader_hooks(loader)
+    traits = get_dataset_traits_from_loader(loader)
 
-    loader_func = hooks["load_dataset"]
+    loader_func = traits["load_dataset"]
     sig = inspect.signature(loader_func)
 
     loader_kwargs: dict[str, Any] = {}
@@ -65,9 +65,9 @@ def load_dataset(
 
     validate_dataset(
         ds,
-        time=hooks.get("time_profile"),
-        space=hooks.get("space_profile"),
-        uncertainty=hooks.get("uncertainty_profile"),
+        time=traits.get("time_profile"),
+        space=traits.get("space_profile"),
+        uncertainty=traits.get("uncertainty_profile"),
     )
 
     return ds

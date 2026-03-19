@@ -6,7 +6,7 @@ import pytest
 import xarray as xr
 
 from mlwp_data_loaders.api import load_dataset
-from mlwp_data_loaders.core import import_loader_hooks
+from mlwp_data_loaders.core import get_dataset_traits_from_loader
 
 
 def _forecast_grid_ds() -> xr.Dataset:
@@ -32,15 +32,15 @@ def _forecast_grid_ds() -> xr.Dataset:
     return ds
 
 
-def test_import_loader_hooks_raises_missing_load_dataset(tmp_path) -> None:
+def test_get_dataset_traits_from_loader_raises_missing_load_dataset(tmp_path) -> None:
     """Loader modules must define a 'load_dataset' function."""
     loader_file = tmp_path / "loader_missing.py"
     loader_file.write_text("TIME_PROFILE = 'forecast'\n", encoding="utf-8")
     with pytest.raises(ValueError, match="must define a 'load_dataset' function"):
-        import_loader_hooks(str(loader_file))
+        get_dataset_traits_from_loader(str(loader_file))
 
 
-def test_import_loader_hooks_finds_constants(tmp_path) -> None:
+def test_get_dataset_traits_from_loader_finds_constants(tmp_path) -> None:
     """Loader modules can define trait constants which are correctly captured."""
     loader_file = tmp_path / "loader_valid.py"
     loader_file.write_text(
@@ -49,11 +49,11 @@ def test_import_loader_hooks_finds_constants(tmp_path) -> None:
         "SPACE_PROFILE = 'grid'\n",
         encoding="utf-8",
     )
-    hooks = import_loader_hooks(str(loader_file))
-    assert "load_dataset" in hooks
-    assert hooks["time_profile"] == "forecast"
-    assert hooks["space_profile"] == "grid"
-    assert "uncertainty_profile" not in hooks
+    traits = get_dataset_traits_from_loader(str(loader_file))
+    assert "load_dataset" in traits
+    assert traits["time_profile"] == "forecast"
+    assert traits["space_profile"] == "grid"
+    assert "uncertainty_profile" not in traits
 
 
 def test_load_dataset_filters_kwargs(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
