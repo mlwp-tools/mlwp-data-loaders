@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import importlib.util
-import sys
 from functools import lru_cache
-from pathlib import Path
 
 import xarray as xr
 from mlwp_data_specs.specs.reporting import ValidationReport
@@ -13,49 +10,19 @@ from mlwp_data_specs.specs.reporting import ValidationReport
 
 @lru_cache(maxsize=1)
 def _load_mxalign_validation_symbols():
-    """Load mxalign property validation modules from the local checkout."""
-    base_dir = Path(__file__).resolve().parents[2] / "mxalign" / "src" / "mxalign"
-    properties_dir = base_dir / "properties"
-    if not properties_dir.exists():
-        raise ImportError(f"mxalign checkout not found at {base_dir}")
+    """Load mxalign property validation modules from the installed package."""
+    try:
+        from mxalign.properties.properties import Properties, Space, Time, Uncertainty
+        from mxalign.properties.validation import validate_dataset
+    except ImportError as e:
+        raise ImportError(f"mxalign package is not installed: {e}")
 
-    package_modules = {
-        "mxalign": base_dir,
-        "mxalign.properties": properties_dir,
-    }
-    for module_name, module_path in package_modules.items():
-        if module_name in sys.modules:
-            continue
-        spec = importlib.util.spec_from_loader(module_name, loader=None)
-        if spec is None:
-            continue
-        module = importlib.util.module_from_spec(spec)
-        module.__path__ = [str(module_path)]  # type: ignore[attr-defined]
-        sys.modules[module_name] = module
-
-    module_paths = {
-        "mxalign.properties.properties": properties_dir / "properties.py",
-        "mxalign.properties.specs": properties_dir / "specs.py",
-        "mxalign.properties.validation": properties_dir / "validation.py",
-    }
-    for module_name, module_path in module_paths.items():
-        if module_name in sys.modules:
-            continue
-        spec = importlib.util.spec_from_file_location(module_name, module_path)
-        if spec is None or spec.loader is None:
-            raise ImportError(f"Could not load {module_name} from {module_path}")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-
-    properties_module = sys.modules["mxalign.properties.properties"]
-    validation_module = sys.modules["mxalign.properties.validation"]
     return {
-        "Properties": properties_module.Properties,
-        "Space": properties_module.Space,
-        "Time": properties_module.Time,
-        "Uncertainty": properties_module.Uncertainty,
-        "validate_dataset": validation_module.validate_dataset,
+        "Properties": Properties,
+        "Space": Space,
+        "Time": Time,
+        "Uncertainty": Uncertainty,
+        "validate_dataset": validate_dataset,
     }
 
 
