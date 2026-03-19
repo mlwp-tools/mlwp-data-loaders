@@ -2,23 +2,23 @@
 
 from __future__ import annotations
 
+import inspect
 from typing import Any
 
 import xarray as xr
+from mlwp_data_specs import validate_dataset
 
-from .core import import_loader_hooks, open_with_loader, validate_loader_profiles
+from .core import import_loader_hooks
 
 
 def load_dataset(
     dataset_path: str | list[str],
     *,
     loader: str,
-    time: str | None = None,
-    space: str | None = None,
-    uncertainty: str | None = None,
     storage_options: dict[str, Any] | None = None,
-) -> xr.Dataset | xr.DataArray:
-    """Load a dataset through a loader module.
+    **kwargs: Any,
+) -> xr.Dataset:
+    """Load a dataset through a loader module and validate it.
 
     Parameters
     ----------
@@ -27,29 +27,47 @@ def load_dataset(
     loader : str
         Loader module reference. A value ending in ``.py`` is treated as a file
         path. A value containing ``.`` is treated as a Python module path.
-    time : str | None, optional
-        Optional time trait selector used to verify loader compatibility.
-    space : str | None, optional
-        Optional space trait selector used to verify loader compatibility.
-    uncertainty : str | None, optional
-        Optional uncertainty trait selector used to verify loader compatibility.
     storage_options : dict[str, Any] | None, optional
-        Storage options forwarded to :func:`xarray.open_dataset`.
+        Storage options forwarded to the loader's ``load_dataset`` function.
+    **kwargs
+        Additional keyword arguments forwarded to the loader's ``load_dataset``
+        function if its signature accepts them.
 
     Returns
     -------
-    xr.Dataset | xr.DataArray
-        Loaded dataset-like object.
+    xr.Dataset
+        Loaded and validated dataset.
     """
     hooks = import_loader_hooks(loader)
-    validate_loader_profiles(
-        hooks,
-        time=time,
-        space=space,
-        uncertainty=uncertainty,
+
+    loader_func = hooks["load_dataset"]
+    sig = inspect.signature(loader_func)
+
+    loader_kwargs: dict[str, Any] = {}
+
+    # Check if the loader's load_dataset accepts **kwargs
+    accepts_kwargs = any(
+        param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
     )
-    return open_with_loader(
-        dataset_path,
-        hooks=hooks,
-        storage_options=storage_options,
+
+    if storage_options is not None:
+        if accepts_kwargs or "storage_options" in sig.parameters:
+            loader_kwargs["storage_options"] = storage_options
+
+    for key, value in kwargs.items():
+        if accepts_kwargs or key in sig.parameters:
+            loader_kwargs[key] = value
+
+    ds = loader_func(dataset_path, **loader_kwargs)
+
+    if not isinstance(ds, xr.Dataset):
+        ds = ds.to_dataset()
+
+    validate_dataset(
+        ds,
+        time=hooks.get("time_profile"),
+        space=hooks.get("space_profile"),
+        uncertainty=hooks.get("uncertainty_profile"),
     )
+
+    return ds

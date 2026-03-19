@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import xarray as xr
-from mlwp_data_specs.specs.reporting import ValidationReport
 from pytest import MonkeyPatch
 
 from mlwp_data_loaders import cli
@@ -32,16 +31,6 @@ def _forecast_grid_ds() -> xr.Dataset:
     return ds
 
 
-def test_cli_requires_trait_selector() -> None:
-    """CLI exits with parser error when no trait selector is provided."""
-    try:
-        cli.main(["a.nc", "--loader", "some.module"])
-    except SystemExit as exc:
-        assert exc.code != 0
-    else:
-        raise AssertionError("Expected parser error")
-
-
 def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
     """CLI passes multiple dataset paths through to the load/validate API."""
     observed: dict[str, object] = {}
@@ -50,12 +39,34 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
         observed["dataset_path"] = dataset_path
         return _forecast_grid_ds()
 
-    report = ValidationReport()
-    report.add("Specs", "dummy", "PASS")
+    def _import_loader_hooks(loader):
+        return {
+            "time_profile": "forecast",
+            "space_profile": "grid",
+            "uncertainty_profile": "deterministic",
+        }
+
+    class _Report:
+        def __init__(self):
+            self.fails = False
+
+        def console_print(self):
+            return None
+
+        def has_fails(self):
+            return self.fails
+
+        def __iadd__(self, other):
+            return self
+
+    def _validate_dataset(ds, **kwargs):
+        return _Report()
+
     monkeypatch.setattr(cli, "load_dataset", _load_dataset)
-    monkeypatch.setattr(cli, "validate_dataset", lambda *args, **kwargs: report)
+    monkeypatch.setattr(cli, "import_loader_hooks", _import_loader_hooks)
+    monkeypatch.setattr(cli, "validate_dataset", _validate_dataset)
     monkeypatch.setattr(
-        cli, "validate_dataset_with_mxalign", lambda *args, **kwargs: ValidationReport()
+        cli, "validate_dataset_with_mxalign", lambda *args, **kwargs: _Report()
     )
 
     code = cli.main(
@@ -64,10 +75,6 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
             "b.nc",
             "--loader",
             "mlwp_data_loaders.loaders.anemoi.anemoi_inference",
-            "--space",
-            "grid",
-            "--time",
-            "forecast",
         ]
     )
 
