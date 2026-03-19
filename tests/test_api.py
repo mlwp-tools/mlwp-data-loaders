@@ -87,8 +87,28 @@ def test_load_dataset_filters_kwargs(tmp_path, monkeypatch: pytest.MonkeyPatch) 
     assert "engine" not in ds.attrs
 
 
-def test_validate_dataset_with_mxalign_returns_fail_report_for_invalid_dims() -> None:
+def test_validate_dataset_with_mxalign_returns_fail_report_for_invalid_dims(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """mxalign validation failures are converted into report entries."""
+
+    def mock_load_symbols():
+        def mock_validate(ds, props):
+            raise ValueError("Mock mxalign validation failed")
+
+        return {
+            "Properties": lambda time, space, uncertainty: "props",
+            "Space": lambda x: x,
+            "Time": lambda x: x,
+            "Uncertainty": lambda x: x,
+            "validate_dataset": mock_validate,
+        }
+
+    monkeypatch.setattr(
+        "mlwp_data_loaders.mxalign_api._load_mxalign_validation_symbols",
+        mock_load_symbols,
+    )
+
     report = mxalign_api.validate_dataset_with_mxalign(
         _forecast_grid_ds(),
         time="observation",

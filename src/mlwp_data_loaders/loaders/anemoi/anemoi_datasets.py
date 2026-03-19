@@ -24,7 +24,14 @@ DROP_VARS = [
 COORDS = dict(longitude="longitudes", latitude="latitudes", valid_time="dates")
 
 
-def load_dataset(path, chunks="auto", consolidated=False, variables=None):
+def load_dataset(
+    path,
+    chunks="auto",
+    consolidated=False,
+    variables=None,
+    storage_options=None,
+    **kwargs,
+):
     """
     Load Anemoi datasets from Zarr files.
 
@@ -46,7 +53,13 @@ def load_dataset(path, chunks="auto", consolidated=False, variables=None):
     """
     variables = [variables] if isinstance(variables, str) else variables
 
-    ds = xr.open_zarr(path, consolidated=consolidated, chunks=chunks)  # type: ignore
+    ds = xr.open_zarr(
+        path,
+        consolidated=consolidated,
+        chunks=chunks,
+        storage_options=storage_options,
+        **kwargs,
+    )  # type: ignore
     ds_postproc = _postprocess(ds)
 
     if variables:

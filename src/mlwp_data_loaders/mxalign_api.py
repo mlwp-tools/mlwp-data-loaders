@@ -27,6 +27,8 @@ def _load_mxalign_validation_symbols():
         if module_name in sys.modules:
             continue
         spec = importlib.util.spec_from_loader(module_name, loader=None)
+        if spec is None:
+            continue
         module = importlib.util.module_from_spec(spec)
         module.__path__ = [str(module_path)]  # type: ignore[attr-defined]
         sys.modules[module_name] = module
@@ -69,7 +71,17 @@ def validate_dataset_with_mxalign(
     if time is None or space is None:
         return report
 
-    mxalign = _load_mxalign_validation_symbols()
+    try:
+        mxalign = _load_mxalign_validation_symbols()
+    except ImportError as e:
+        report.add(
+            "MXAlign Properties",
+            "mxalign.properties.validation",
+            "WARNING",
+            f"mxalign not available for validation: {e}",
+        )
+        return report
+
     properties = mxalign["Properties"](
         time=mxalign["Time"](time),
         space=mxalign["Space"](space),
