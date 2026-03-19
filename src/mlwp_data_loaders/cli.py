@@ -15,7 +15,13 @@ from .mxalign_api import validate_dataset_with_mxalign
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build the CLI argument parser."""
+    """Build the CLI argument parser.
+
+    Returns
+    -------
+    argparse.ArgumentParser
+        The configured argument parser.
+    """
     parser = argparse.ArgumentParser(
         description=(
             "Load a dataset through a loader module and validate it with "
@@ -45,7 +51,18 @@ def build_parser() -> argparse.ArgumentParser:
 
 @logger.catch
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run dataset loading and validation from CLI arguments."""
+    """Run dataset loading and validation from CLI arguments.
+
+    Parameters
+    ----------
+    argv : Sequence[str] | None, optional
+        Command line arguments. Defaults to None, which uses sys.argv[1:].
+
+    Returns
+    -------
+    int
+        Exit code: 0 for success, 1 for validation failures.
+    """
     parser = build_parser()
     args = parser.parse_args(argv)
 
