@@ -1,3 +1,5 @@
+from typing import Any
+
 import xarray as xr
 
 TIME_PROFILE = "forecast"
@@ -5,7 +7,13 @@ SPACE_PROFILE = "grid"
 UNCERTAINTY_PROFILE = "deterministic"
 
 
-def load_dataset(paths, chunks="auto", engine="h5netcdf", parallel=True, **kwargs):
+def load_dataset(
+    paths: str | list[str],
+    chunks: str | dict | None = "auto",
+    engine: str = "h5netcdf",
+    parallel: bool = True,
+    **kwargs: Any,
+) -> xr.Dataset:
     """
     Load Anemoi inference datasets from NetCDF/HDF5 files.
 
@@ -13,7 +21,7 @@ def load_dataset(paths, chunks="auto", engine="h5netcdf", parallel=True, **kwarg
     ----------
     paths : str or list of str
         Path or list of paths to the dataset files.
-    chunks : str or dict, default: "auto"
+    chunks : str or dict or None, default: "auto"
         Chunk size or strategy for dask arrays.
     engine : str, default: "h5netcdf"
         Engine to use for reading the files.
@@ -54,7 +62,19 @@ def load_dataset(paths, chunks="auto", engine="h5netcdf", parallel=True, **kwarg
     return ds_out
 
 
-def _preprocess(ds):
+def _preprocess(ds: xr.Dataset) -> xr.Dataset:
+    """Preprocess individual datasets before concatenation.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        The input dataset to preprocess.
+
+    Returns
+    -------
+    xr.Dataset
+        The preprocessed dataset with reference time expanded.
+    """
     ds_out = (
         ds.set_coords(["longitude", "latitude"])
         .expand_dims("reference_time")
