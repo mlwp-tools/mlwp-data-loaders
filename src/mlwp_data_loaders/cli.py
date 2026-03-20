@@ -77,14 +77,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     logger.info(f"Using mlwp-data-specs {specs_version}")
 
     # Load the dataset
-    res = load_dataset(
+    ds, dataset_traits = load_dataset(  # type: ignore  # load_dataset returns a tuple when return_dataset_traits=True
         dataset_input,
         loader=args.loader,
         storage_options=storage_options or None,
         return_dataset_traits=True,
     )
-    assert isinstance(res, tuple)
-    ds, dataset_traits = res
 
     time_profile = dataset_traits.get("time_profile")
     space_profile = dataset_traits.get("space_profile")
