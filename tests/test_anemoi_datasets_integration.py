@@ -24,7 +24,7 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
         "anon": True,
     }
 
-    ds, traits = load_dataset(  # type: ignore  # load_dataset returns a tuple when return_dataset_traits=True
+    ds, dataset_traits = load_dataset(  # type: ignore  # load_dataset returns a tuple when return_dataset_traits=True
         DATASET_PATH,
         loader=LOADER,
         storage_options=storage_options,
@@ -36,9 +36,9 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
     # to ensure `mlwp-data-specs` behaves identically. It will eventually be removed.
     report_mxalign = validate_dataset_with_mxalign(
         ds,
-        time=traits.get("time_profile"),
-        space=traits.get("space_profile"),
-        uncertainty=traits.get("uncertainty_profile"),
+        time=dataset_traits.get("time_profile"),
+        space=dataset_traits.get("space_profile"),
+        uncertainty=dataset_traits.get("uncertainty_profile"),
     )
     if report_mxalign.has_fails():
         report_mxalign.console_print()
@@ -46,9 +46,9 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
 
     report_specs = validate_dataset(
         ds,
-        time=traits.get("time_profile"),
-        space=traits.get("space_profile"),
-        uncertainty=traits.get("uncertainty_profile"),
+        time=dataset_traits.get("time_profile"),
+        space=dataset_traits.get("space_profile"),
+        uncertainty=dataset_traits.get("uncertainty_profile"),
     )
     if report_specs.has_fails():
         report_specs.console_print()
