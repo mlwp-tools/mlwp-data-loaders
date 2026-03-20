@@ -16,8 +16,9 @@ def load_dataset(
     *,
     loader: str,
     storage_options: dict[str, Any] | None = None,
+    return_dataset_traits: bool = False,
     **kwargs: Any,
-) -> xr.Dataset:
+) -> xr.Dataset | tuple[xr.Dataset, dict[str, Any]]:
     """Load a dataset through a loader module and validate it.
 
     Parameters
@@ -29,18 +30,22 @@ def load_dataset(
         path. A value containing ``.`` is treated as a Python module path.
     storage_options : dict[str, Any] | None, optional
         Storage options forwarded to the loader's ``load_dataset`` function.
+    return_dataset_traits : bool, optional
+        If True, return a tuple containing the dataset and the loader traits.
+        Defaults to False.
     **kwargs
         Additional keyword arguments forwarded to the loader's ``load_dataset``
         function if its signature accepts them.
 
     Returns
     -------
-    xr.Dataset
-        Loaded and validated dataset.
+    xr.Dataset | tuple[xr.Dataset, dict[str, Any]]
+        Loaded and validated dataset. If `return_dataset_traits` is True,
+        returns a tuple of (dataset, dataset_traits).
     """
-    traits = get_dataset_traits_from_loader(loader)
+    dataset_traits = get_dataset_traits_from_loader(loader)
 
-    loader_func = traits["load_dataset"]
+    loader_func = dataset_traits["load_dataset"]
     sig = inspect.signature(loader_func)
 
     loader_kwargs: dict[str, Any] = {}
@@ -65,9 +70,11 @@ def load_dataset(
 
     validate_dataset(
         ds,
-        time=traits.get("time_profile"),
-        space=traits.get("space_profile"),
-        uncertainty=traits.get("uncertainty_profile"),
+        time=dataset_traits.get("time_profile"),
+        space=dataset_traits.get("space_profile"),
+        uncertainty=dataset_traits.get("uncertainty_profile"),
     )
 
+    if return_dataset_traits:
+        return ds, dataset_traits
     return ds

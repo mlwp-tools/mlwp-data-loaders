@@ -37,14 +37,13 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
 
     def _load_dataset(dataset_path, **kwargs):
         observed["dataset_path"] = dataset_path
+        if kwargs.get("return_dataset_traits"):
+            return _forecast_grid_ds(), {
+                "time_profile": "forecast",
+                "space_profile": "grid",
+                "uncertainty_profile": "deterministic",
+            }
         return _forecast_grid_ds()
-
-    def _get_dataset_traits_from_loader(loader):
-        return {
-            "time_profile": "forecast",
-            "space_profile": "grid",
-            "uncertainty_profile": "deterministic",
-        }
 
     class _Report:
         def __init__(self):
@@ -63,13 +62,7 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
         return _Report()
 
     monkeypatch.setattr(cli, "load_dataset", _load_dataset)
-    monkeypatch.setattr(
-        cli, "get_dataset_traits_from_loader", _get_dataset_traits_from_loader
-    )
     monkeypatch.setattr(cli, "validate_dataset", _validate_dataset)
-    monkeypatch.setattr(
-        cli, "validate_dataset_with_mxalign", lambda *args, **kwargs: _Report()
-    )
 
     code = cli.main(
         [

@@ -7,106 +7,111 @@ Loader package for opening source datasets before validating them with
 
 `mlwp-data-loaders` is responsible for:
 
-1. importing a loader module or script
-2. opening one or more source datasets using loader-defined traits
-3. optionally checking that the chosen trait profiles are compatible with the loader
-4. returning an `xarray.Dataset` that can then be validated with `mlwp-data-specs`
+1. Importing a loader module (or Python file).
+2. Using the loader to open and normalize source datasets.
+3. Extracting the appropriate validation trait profiles (`TIME_PROFILE`, `SPACE_PROFILE`, `UNCERTAINTY_PROFILE`) defined by the loader.
+4. Validating the returned `xarray.Dataset` automatically via `mlwp-data-specs`.
+5. Returning the `xarray.Dataset` (and optionally the trait dict) for further use or machine learning workloads.
 
 The intended split is:
-
-1. `mlwp-data-loaders`: source-specific loading and normalization
-2. `mlwp-data-specs`: trait validation
+- **`mlwp-data-loaders`**: Source-specific loading and normalization logic.
+- **`mlwp-data-specs`**: General trait validation and compliance checks.
 
 ## Python API
 
 The `loader` argument is interpreted as:
+- A Python file path if it ends with `.py`.
+- A Python module path if it contains `.` (e.g. `mlwp_data_loaders.loaders.anemoi.anemoi_inference`).
 
-- a Python file path if it ends with `.py`
-- a Python module path if it contains `.`
-
-Load a dataset through a loader module:
+You can load a dataset and its trait profiles natively:
 
 ```python
 from mlwp_data_loaders import load_dataset
 from mlwp_data_specs import validate_dataset
 
-ds = load_dataset(
+# 1. Load the dataset and extract the trait profiles defined by the loader
+ds, dataset_traits = load_dataset(
     [
         "/path/to/anemoi-inference-20260101T00.nc",
         "/path/to/anemoi-inference-20260102T00.nc",
     ],
     loader="mlwp_data_loaders.loaders.anemoi.anemoi_inference",
-    time="forecast",
-    space="grid",
-    uncertainty="deterministic",
+    return_dataset_traits=True,
 )
 
+# 2. Get a detailed validation report by passing the extracted traits
 report = validate_dataset(
     ds,
-    time="forecast",
-    space="grid",
-    uncertainty="deterministic",
+    time=dataset_traits.get("time_profile"),
+    space=dataset_traits.get("space_profile"),
+    uncertainty=dataset_traits.get("uncertainty_profile"),
 )
 
+# 3. Print the validation results to the console
 report.console_print()
+```
+
+If you don't need the traits dictionary returned, simply omit `return_dataset_traits` (defaults to `False`):
+
+```python
+ds = load_dataset(
+    "s3://my-bucket/dataset.zarr",
+    loader="mlwp_data_loaders.loaders.anemoi.anemoi_datasets",
+    storage_options={"anon": True},
+)
 ```
 
 ## CLI
 
-Use the loader-aware CLI:
+Use the loader-aware CLI to load and validate data from the command line:
 
 ```bash
 uv run mlwp.load_and_validate_dataset \
   /path/to/anemoi-inference-20260101T00.nc \
   /path/to/anemoi-inference-20260102T00.nc \
-  --loader mlwp_data_loaders.loaders.anemoi.anemoi_inference \
-  --time forecast \
-  --space grid \
-  --uncertainty deterministic
+  --loader mlwp_data_loaders.loaders.anemoi.anemoi_inference
 ```
 
-Using a user-provided loader script:
+Using a user-provided custom loader script:
 
 ```bash
 uv run mlwp.load_and_validate_dataset \
   /path/to/source-a.nc \
   /path/to/source-b.nc \
-  --loader ./examples/my_loader.py \
-  --time forecast \
-  --space grid \
-  --uncertainty deterministic
+  --loader ./examples/my_loader.py
 ```
 
-## Loader module contract
+## Loader Module Contract
 
-The loader module may define a subset of the following:
+Each loader module must define a function and optionally standard profile variables:
 
-1. Variables defining how each provided path is opened with `xarray.open_dataset`
-   - `OPEN_KWARGS`: keyword arguments forwarded to `xarray.open_dataset`, including backend selection such as `{"engine": "zarr"}` or `{"engine": "h5netcdf"}`
-2. Functions and variables around preprocessing, concatenation, and postprocessing
-   - `preprocess(ds)`: normalize each opened source dataset before combination
-   - `CONCAT_DIM`: dimension used when combining multiple inputs; required if more than one path is provided
-   - `postprocess(ds)`: finalize the combined dataset before validation
-3. Variables defining valid trait profiles
-   - `valid_time_profiles`: allowed `time=` profile values for this loader
-   - `valid_space_profiles`: allowed `space=` profile values for this loader
-   - `valid_uncertainty_profiles`: allowed `uncertainty=` profile values for this loader
+1. `load_dataset(path: str | list[str], **kwargs) -> xr.Dataset`
+   - **Required**. Handles opening the path(s), preprocessing, concatenating, and postprocessing, returning a single normalized `xarray.Dataset`.
+2. `TIME_PROFILE`: `str`
+   - Defines the time trait profile for `mlwp-data-specs` validation (e.g. `"forecast"`).
+3. `SPACE_PROFILE`: `str`
+   - Defines the space trait profile (e.g. `"grid"`).
+4. `UNCERTAINTY_PROFILE`: `str`
+   - Defines the uncertainty trait profile (e.g. `"deterministic"`).
 
-Example:
+### Example Loader (`my_loader.py`)
 
 ```python
 import xarray as xr
 
-OPEN_KWARGS = {}
+TIME_PROFILE = "observation"
+SPACE_PROFILE = "grid"
+UNCERTAINTY_PROFILE = "deterministic"
 
+def load_dataset(path: str | list[str], **kwargs) -> xr.Dataset:
+    if isinstance(path, list):
+        ds = xr.open_mfdataset(path, combine="by_coords", **kwargs)
+    else:
+        ds = xr.open_dataset(path, **kwargs)
 
-def preprocess(ds: xr.Dataset) -> xr.Dataset | xr.DataArray:
-    return ds
+    # Example post-processing
+    if "time" in ds.dims:
+        ds = ds.rename({"time": "valid_time"})
 
-
-CONCAT_DIM = "valid_time"
-
-
-def postprocess(ds: xr.Dataset | xr.DataArray) -> xr.Dataset | xr.DataArray:
     return ds
 ```

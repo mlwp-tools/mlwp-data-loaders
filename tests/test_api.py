@@ -82,9 +82,38 @@ def test_load_dataset_filters_kwargs(tmp_path, monkeypatch: pytest.MonkeyPatch) 
         engine="h5netcdf",  # Should be ignored because strict load_dataset doesn't take 'engine'
         storage_options={"anon": True},  # Should be ignored
     )
+    assert isinstance(ds, xr.Dataset)
 
     assert ds.attrs["chunks"] == "auto"
     assert "engine" not in ds.attrs
+
+
+def test_load_dataset_returns_traits(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Check that api.load_dataset returns traits when requested."""
+    loader_file = tmp_path / "loader_traits.py"
+    loader_file.write_text(
+        "def load_dataset(path, **kwargs):\n"
+        "    from xarray import Dataset\n"
+        "    return Dataset()\n"
+        "TIME_PROFILE = 'forecast'\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setattr(
+        "mlwp_data_loaders.api.validate_dataset", lambda *args, **kwargs: None
+    )
+
+    res = load_dataset(
+        "dummy.nc",
+        loader=str(loader_file),
+        return_dataset_traits=True,
+    )
+    assert isinstance(res, tuple)
+
+    ds, dataset_traits = res  # type: ignore  # load_dataset returns a tuple when return_dataset_traits=True
+    assert isinstance(ds, xr.Dataset)
+    assert isinstance(dataset_traits, dict)
+    assert dataset_traits.get("time_profile") == "forecast"
 
 
 def test_validate_dataset_with_mxalign_returns_fail_report_for_invalid_dims(

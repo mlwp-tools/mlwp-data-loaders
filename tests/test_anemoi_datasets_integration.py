@@ -5,7 +5,6 @@ from __future__ import annotations
 from mlwp_data_specs import validate_dataset
 
 from mlwp_data_loaders.api import load_dataset
-from mlwp_data_loaders.core import get_dataset_traits_from_loader
 from mlwp_data_loaders.mxalign_api import validate_dataset_with_mxalign
 
 # Use small CERRA sample dataset stored on EWC (European Weather Cloud)
@@ -25,20 +24,21 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
         "anon": True,
     }
 
-    ds = load_dataset(
+    ds, dataset_traits = load_dataset(  # type: ignore  # load_dataset returns a tuple when return_dataset_traits=True
         DATASET_PATH,
         loader=LOADER,
         storage_options=storage_options,
         chunks=None,
+        return_dataset_traits=True,
     )
 
-    traits = get_dataset_traits_from_loader(LOADER)
-
+    # Note: mxalign validation is temporarily kept here during early development
+    # to ensure `mlwp-data-specs` behaves identically. It will eventually be removed.
     report_mxalign = validate_dataset_with_mxalign(
         ds,
-        time=traits.get("time_profile"),
-        space=traits.get("space_profile"),
-        uncertainty=traits.get("uncertainty_profile"),
+        time=dataset_traits.get("time_profile"),
+        space=dataset_traits.get("space_profile"),
+        uncertainty=dataset_traits.get("uncertainty_profile"),
     )
     if report_mxalign.has_fails():
         report_mxalign.console_print()
@@ -46,9 +46,9 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
 
     report_specs = validate_dataset(
         ds,
-        time=traits.get("time_profile"),
-        space=traits.get("space_profile"),
-        uncertainty=traits.get("uncertainty_profile"),
+        time=dataset_traits.get("time_profile"),
+        space=dataset_traits.get("space_profile"),
+        uncertainty=dataset_traits.get("uncertainty_profile"),
     )
     if report_specs.has_fails():
         report_specs.console_print()
