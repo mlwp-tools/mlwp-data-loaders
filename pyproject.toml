@@ -48,7 +48,9 @@ dev = [
     "pre-commit>=4.0.0",
     "ipython>=9.11.0",
     "pytest>=9.0.2",
+    "pooch>=1.9.0",
 ]
 test = [
     "mxalign",
+    "pooch",
 ]

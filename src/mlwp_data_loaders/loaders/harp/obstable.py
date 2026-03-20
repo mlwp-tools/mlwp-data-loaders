@@ -92,6 +92,14 @@ def load_dataset(
         altitude=("code", alt_values),
     )
 
+    ds.coords["valid_time"].attrs["standard_name"] = "time"
+    ds.coords["latitude"].attrs.update(
+        {"standard_name": "latitude", "units": "degrees_north"}
+    )
+    ds.coords["longitude"].attrs.update(
+        {"standard_name": "longitude", "units": "degrees_east"}
+    )
+
     return ds.rename_dims({"code": "point_index"}).transpose(
         "valid_time", "point_index"
     )
