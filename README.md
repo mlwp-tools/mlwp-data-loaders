@@ -27,7 +27,9 @@ You can load a dataset and its trait profiles natively:
 
 ```python
 from mlwp_data_loaders import load_dataset
+from mlwp_data_specs import validate_dataset
 
+# 1. Load the dataset and extract the trait profiles defined by the loader
 ds, dataset_traits = load_dataset(
     [
         "/path/to/anemoi-inference-20260101T00.nc",
@@ -37,8 +39,16 @@ ds, dataset_traits = load_dataset(
     return_dataset_traits=True,
 )
 
-print(f"Validation time profile used: {dataset_traits['time_profile']}")
-print(f"Dataset has {len(ds.data_vars)} variables.")
+# 2. Get a detailed validation report by passing the extracted traits
+report = validate_dataset(
+    ds,
+    time=dataset_traits.get("time_profile"),
+    space=dataset_traits.get("space_profile"),
+    uncertainty=dataset_traits.get("uncertainty_profile"),
+)
+
+# 3. Print the validation results to the console
+report.console_print()
 ```
 
 If you don't need the traits dictionary returned, simply omit `return_dataset_traits` (defaults to `False`):
