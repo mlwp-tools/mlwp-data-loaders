@@ -10,8 +10,6 @@ from mlwp_data_specs import __version__ as specs_version
 from mlwp_data_specs.api import validate_dataset
 
 from .api import load_dataset
-from .core import get_dataset_traits_from_loader
-from .mxalign_api import validate_dataset_with_mxalign
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -79,27 +77,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     logger.info(f"Using mlwp-data-specs {specs_version}")
 
     # Load the dataset
-    ds = load_dataset(
+    res = load_dataset(
         dataset_input,
         loader=args.loader,
         storage_options=storage_options or None,
+        return_dataset_traits=True,
     )
+    assert isinstance(res, tuple)
+    ds, dataset_traits = res
 
-    # Re-run validation to get the report for printing
-    traits = get_dataset_traits_from_loader(args.loader)
-
-    time_profile = traits.get("time_profile")
-    space_profile = traits.get("space_profile")
-    uncertainty_profile = traits.get("uncertainty_profile")
+    time_profile = dataset_traits.get("time_profile")
+    space_profile = dataset_traits.get("space_profile")
+    uncertainty_profile = dataset_traits.get("uncertainty_profile")
 
     report = validate_dataset(
-        ds,
-        time=time_profile,
-        space=space_profile,
-        uncertainty=uncertainty_profile,
-    )
-
-    report += validate_dataset_with_mxalign(
         ds,
         time=time_profile,
         space=space_profile,

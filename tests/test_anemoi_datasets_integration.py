@@ -5,7 +5,6 @@ from __future__ import annotations
 from mlwp_data_specs import validate_dataset
 
 from mlwp_data_loaders.api import load_dataset
-from mlwp_data_loaders.core import get_dataset_traits_from_loader
 from mlwp_data_loaders.mxalign_api import validate_dataset_with_mxalign
 
 # Use small CERRA sample dataset stored on EWC (European Weather Cloud)
@@ -25,14 +24,13 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
         "anon": True,
     }
 
-    ds = load_dataset(
+    ds, traits = load_dataset(
         DATASET_PATH,
         loader=LOADER,
         storage_options=storage_options,
         chunks=None,
+        return_dataset_traits=True,
     )
-
-    traits = get_dataset_traits_from_loader(LOADER)
 
     report_mxalign = validate_dataset_with_mxalign(
         ds,
