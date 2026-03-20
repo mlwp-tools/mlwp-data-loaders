@@ -24,7 +24,7 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
         "anon": True,
     }
 
-    ds, traits = load_dataset(
+    ds, traits = load_dataset(  # type: ignore  # load_dataset returns a tuple when return_dataset_traits=True
         DATASET_PATH,
         loader=LOADER,
         storage_options=storage_options,
@@ -32,6 +32,8 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
         return_dataset_traits=True,
     )
 
+    # Note: mxalign validation is temporarily kept here during early development
+    # to ensure `mlwp-data-specs` behaves identically. It will eventually be removed.
     report_mxalign = validate_dataset_with_mxalign(
         ds,
         time=traits.get("time_profile"),

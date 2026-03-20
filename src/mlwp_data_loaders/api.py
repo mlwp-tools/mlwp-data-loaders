@@ -3,36 +3,12 @@
 from __future__ import annotations
 
 import inspect
-from typing import Any, Literal, overload
+from typing import Any
 
 import xarray as xr
 from mlwp_data_specs import validate_dataset
 
 from .core import get_dataset_traits_from_loader
-
-
-@overload
-def load_dataset(
-    dataset_path: str | list[str],
-    *,
-    loader: str,
-    storage_options: dict[str, Any] | None = None,
-    return_dataset_traits: Literal[False] = False,
-    **kwargs: Any,
-) -> xr.Dataset:
-    ...
-
-
-@overload
-def load_dataset(
-    dataset_path: str | list[str],
-    *,
-    loader: str,
-    storage_options: dict[str, Any] | None = None,
-    return_dataset_traits: Literal[True],
-    **kwargs: Any,
-) -> tuple[xr.Dataset, dict[str, Any]]:
-    ...
 
 
 def load_dataset(

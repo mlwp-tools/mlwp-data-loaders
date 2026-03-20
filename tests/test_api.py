@@ -110,7 +110,7 @@ def test_load_dataset_returns_traits(tmp_path, monkeypatch: pytest.MonkeyPatch) 
     )
     assert isinstance(res, tuple)
 
-    ds, dataset_traits = res
+    ds, dataset_traits = res  # type: ignore  # load_dataset returns a tuple when return_dataset_traits=True
     assert isinstance(ds, xr.Dataset)
     assert isinstance(dataset_traits, dict)
     assert dataset_traits.get("time_profile") == "forecast"

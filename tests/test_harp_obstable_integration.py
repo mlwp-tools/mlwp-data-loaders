@@ -7,7 +7,6 @@ import pytest
 from mlwp_data_specs import validate_dataset
 
 from mlwp_data_loaders.api import load_dataset
-from mlwp_data_loaders.core import get_dataset_traits_from_loader
 from mlwp_data_loaders.mxalign_api import validate_dataset_with_mxalign
 
 HARP_DATA_URL = "https://raw.githubusercontent.com/harphub/harpData/master/inst/OBSTABLE/OBSTABLE_2019.sqlite"
@@ -26,13 +25,14 @@ def obstable_path() -> str:
 
 def test_load_dataset_opens_harp_obstable(obstable_path: str) -> None:
     """The harp.obstable loader can open and validate the sample SQLite file."""
-    ds = load_dataset(
+    ds, traits = load_dataset(  # type: ignore  # load_dataset returns a tuple when return_dataset_traits=True
         obstable_path,
         loader=LOADER,
+        return_dataset_traits=True,
     )
 
-    traits = get_dataset_traits_from_loader(LOADER)
-
+    # Note: mxalign validation is temporarily kept here during early development
+    # to ensure `mlwp-data-specs` behaves identically. It will eventually be removed.
     report_mxalign = validate_dataset_with_mxalign(
         ds,
         time=traits.get("time_profile"),
