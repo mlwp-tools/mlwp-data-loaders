@@ -2,23 +2,27 @@
 
 from __future__ import annotations
 
-import inspect
 from typing import Any
 
 import xarray as xr
 from mlwp_data_specs import validate_dataset
+from mlwp_data_specs.specs.reporting import ValidationReport
 
-from .core import get_dataset_traits_from_loader
+from .core import (
+    SPACE_TRAIT_ATTR,
+    TIME_TRAIT_ATTR,
+    UNCERTAINTY_TRAIT_ATTR,
+    get_loader_func,
+)
 
 
-def load_dataset(
+def load_and_validate_dataset(
     dataset_path: str | list[str],
     *,
     loader: str,
-    storage_options: dict[str, Any] | None = None,
-    return_dataset_traits: bool = False,
+    return_validation_report: bool = False,
     **kwargs: Any,
-) -> xr.Dataset | tuple[xr.Dataset, dict[str, Any]]:
+) -> xr.Dataset | tuple[xr.Dataset, ValidationReport]:
     """Load a dataset through a loader module and validate it.
 
     Parameters
@@ -28,53 +32,56 @@ def load_dataset(
     loader : str
         Loader module reference. A value ending in ``.py`` is treated as a file
         path. A value containing ``.`` is treated as a Python module path.
-    storage_options : dict[str, Any] | None, optional
-        Storage options forwarded to the loader's ``load_dataset`` function.
-    return_dataset_traits : bool, optional
-        If True, return a tuple containing the dataset and the loader traits.
+    return_validation_report : bool, optional
+        If True, return a tuple containing the dataset and the validation report.
         Defaults to False.
     **kwargs
         Additional keyword arguments forwarded to the loader's ``load_dataset``
-        function if its signature accepts them.
+        function (e.g., ``storage_options``).
 
     Returns
     -------
-    xr.Dataset | tuple[xr.Dataset, dict[str, Any]]
-        Loaded and validated dataset. If `return_dataset_traits` is True,
-        returns a tuple of (dataset, dataset_traits).
+    xr.Dataset | tuple[xr.Dataset, ValidationReport]
+        Loaded and validated dataset. If `return_validation_report` is True,
+        returns a tuple of (dataset, validation_report).
+
+    Raises
+    ------
+    ValueError
+        If validation fails and `return_validation_report` is False.
     """
-    dataset_traits = get_dataset_traits_from_loader(loader)
+    loader_func = get_loader_func(loader)
 
-    loader_func = dataset_traits["load_dataset"]
-    sig = inspect.signature(loader_func)
-
-    loader_kwargs: dict[str, Any] = {}
-
-    # Check if the loader's load_dataset accepts **kwargs
-    accepts_kwargs = any(
-        param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()
-    )
-
-    if storage_options is not None:
-        if accepts_kwargs or "storage_options" in sig.parameters:
-            loader_kwargs["storage_options"] = storage_options
-
-    for key, value in kwargs.items():
-        if accepts_kwargs or key in sig.parameters:
-            loader_kwargs[key] = value
-
-    ds = loader_func(dataset_path, **loader_kwargs)
+    ds = loader_func(dataset_path, **kwargs)
 
     if not isinstance(ds, xr.Dataset):
         ds = ds.to_dataset()
 
-    validate_dataset(
+    # All data loaders must explicitly define these three trait attributes
+    # on the returned xarray dataset.
+    try:
+        time_trait = ds.attrs[TIME_TRAIT_ATTR]
+        space_trait = ds.attrs[SPACE_TRAIT_ATTR]
+        uncertainty_trait = ds.attrs[UNCERTAINTY_TRAIT_ATTR]
+    except KeyError as exc:
+        raise ValueError(
+            f"Loader {loader!r} returned a dataset missing required trait attribute: {exc}"
+        ) from exc
+
+    report = validate_dataset(
         ds,
-        time=dataset_traits.get("time_profile"),
-        space=dataset_traits.get("space_profile"),
-        uncertainty=dataset_traits.get("uncertainty_profile"),
+        time=time_trait,
+        space=space_trait,
+        uncertainty=uncertainty_trait,
     )
 
-    if return_dataset_traits:
-        return ds, dataset_traits
+    if return_validation_report:
+        return ds, report
+
+    if report.has_fails():
+        # Ideally, we should be able to format the report nicely
+        raise ValueError(
+            "Dataset validation failed. Run with return_validation_report=True for details."
+        )
+
     return ds

@@ -2,9 +2,11 @@ from typing import Any
 
 import xarray as xr
 
-TIME_PROFILE = "forecast"
-SPACE_PROFILE = "grid"
-UNCERTAINTY_PROFILE = "deterministic"
+from mlwp_data_loaders.core import (
+    SPACE_TRAIT_ATTR,
+    TIME_TRAIT_ATTR,
+    UNCERTAINTY_TRAIT_ATTR,
+)
 
 
 def load_dataset(
@@ -58,6 +60,10 @@ def load_dataset(
         .rename_dims({"values": "grid_index"})
         .swap_dims({"time": "lead_time"})
     )
+
+    ds_out.attrs[TIME_TRAIT_ATTR] = "forecast"
+    ds_out.attrs[SPACE_TRAIT_ATTR] = "grid"
+    ds_out.attrs[UNCERTAINTY_TRAIT_ATTR] = "deterministic"
 
     return ds_out
 

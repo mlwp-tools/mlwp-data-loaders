@@ -4,9 +4,11 @@ import numpy as np
 import xarray as xr
 from loguru import logger
 
-TIME_PROFILE = "observation"
-SPACE_PROFILE = "grid"
-UNCERTAINTY_PROFILE = "deterministic"
+from mlwp_data_loaders.core import (
+    SPACE_TRAIT_ATTR,
+    TIME_TRAIT_ATTR,
+    UNCERTAINTY_TRAIT_ATTR,
+)
 
 DROP_VARS = [
     "latitude",
@@ -78,7 +80,11 @@ def load_dataset(
                 f"to xr.Dataset, this might take some time. Consider selecting the relevant variables during loading"
             )
 
-    return ds_selected.to_dataset(dim="variable")
+    ds_final = ds_selected.to_dataset(dim="variable")
+    ds_final.attrs[TIME_TRAIT_ATTR] = "observation"
+    ds_final.attrs[SPACE_TRAIT_ATTR] = "grid"
+    ds_final.attrs[UNCERTAINTY_TRAIT_ATTR] = "deterministic"
+    return ds_final
 
 
 def _postprocess(dataset: xr.Dataset) -> xr.Dataset:

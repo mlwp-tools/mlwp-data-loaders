@@ -35,16 +35,6 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
     """CLI passes multiple dataset paths through to the load/validate API."""
     observed: dict[str, object] = {}
 
-    def _load_dataset(dataset_path, **kwargs):
-        observed["dataset_path"] = dataset_path
-        if kwargs.get("return_dataset_traits"):
-            return _forecast_grid_ds(), {
-                "time_profile": "forecast",
-                "space_profile": "grid",
-                "uncertainty_profile": "deterministic",
-            }
-        return _forecast_grid_ds()
-
     class _Report:
         def __init__(self):
             self.fails = False
@@ -58,11 +48,13 @@ def test_cli_accepts_multiple_dataset_paths(monkeypatch: MonkeyPatch) -> None:
         def __iadd__(self, other):
             return self
 
-    def _validate_dataset(ds, **kwargs):
-        return _Report()
+    def _load_and_validate_dataset(dataset_path, **kwargs):
+        observed["dataset_path"] = dataset_path
+        if kwargs.get("return_validation_report"):
+            return _forecast_grid_ds(), _Report()
+        return _forecast_grid_ds()
 
-    monkeypatch.setattr(cli, "load_dataset", _load_dataset)
-    monkeypatch.setattr(cli, "validate_dataset", _validate_dataset)
+    monkeypatch.setattr(cli, "load_and_validate_dataset", _load_and_validate_dataset)
 
     code = cli.main(
         [

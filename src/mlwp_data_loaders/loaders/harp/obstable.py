@@ -7,9 +7,11 @@ import sqlite3
 import pandas as pd
 import xarray as xr
 
-TIME_PROFILE = "observation"
-SPACE_PROFILE = "point"
-UNCERTAINTY_PROFILE = "deterministic"
+from mlwp_data_loaders.core import (
+    SPACE_TRAIT_ATTR,
+    TIME_TRAIT_ATTR,
+    UNCERTAINTY_TRAIT_ATTR,
+)
 
 COORDS = {
     "longitude": "lon",
@@ -100,6 +102,12 @@ def load_dataset(
         {"standard_name": "longitude", "units": "degrees_east"}
     )
 
-    return ds.rename_dims({"code": "point_index"}).transpose(
+    ds_final = ds.rename_dims({"code": "point_index"}).transpose(
         "valid_time", "point_index"
     )
+
+    ds_final.attrs[TIME_TRAIT_ATTR] = "observation"
+    ds_final.attrs[SPACE_TRAIT_ATTR] = "point"
+    ds_final.attrs[UNCERTAINTY_TRAIT_ATTR] = "deterministic"
+
+    return ds_final
