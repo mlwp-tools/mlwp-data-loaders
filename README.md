@@ -7,10 +7,9 @@ Loader package for opening source datasets before validating them with
 
 `mlwp-data-loaders` is responsible for:
 
-1. Importing a loader module (or Python file).
-2. Using the loader to open and normalize source files, while [setting global attributes on the resulting dataset](#loader-module-contract) to indicate the [dataset's traits](https://github.com/mlwp-tools/mlwp-data-specs).
-3. Validating the returned dataset automatically via `mlwp-data-specs`.
-4. Returning the `xarray.Dataset` (and optionally a validation report) for further use or machine learning workloads.
+1. Using a given loader module ([bundled with mlwp-data-loaders](src/mlwp_data_loaders/loaders/) or [user-provided](#loader-module-contract)) that defines how to load and normalize source files. The loader is expected to [set global attributes on the resulting dataset](#loader-module-contract) to indicate the [dataset's traits](https://github.com/mlwp-tools/mlwp-data-specs).
+2. Validating the returned dataset automatically via `mlwp-data-specs`.
+3. Returning the `xarray.Dataset` (and optionally a validation report) for further use or machine learning workloads.
 
 The intended split is:
 - **`mlwp-data-loaders`**: Source-specific loading and normalization logic.
