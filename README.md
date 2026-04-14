@@ -13,7 +13,7 @@ Loader package for opening source datasets before validating them with
 
 The intended split is:
 - **`mlwp-data-loaders`** (this repo): Source-specific loading and normalization logic.
-- [**`mlwp-data-specs`**](https://github.com/mlwp-tools/mlwp-data-specs): General trait validation and compliance checks.
+- [**`mlwp-data-specs`**](https://github.com/mlwp-tools/mlwp-data-specs): Trait dataset requirements definitions and validation.
 
 ## Python API
 
