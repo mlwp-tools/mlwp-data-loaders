@@ -12,8 +12,8 @@ Loader package for opening source datasets before validating them with
 3. Returning the `xarray.Dataset` (and optionally a validation report) for further use or machine learning workloads.
 
 The intended split is:
-- **`mlwp-data-loaders`**: Source-specific loading and normalization logic.
-- **`mlwp-data-specs`**: General trait validation and compliance checks.
+- [**`mlwp-data-loaders`**](https://github.com/mlwp-tools/mlwp-data-loaders): Source-specific loading and normalization logic.
+- [**`mlwp-data-specs`**](https://github.com/mlwp-tools/mlwp-data-specs): General trait validation and compliance checks.
 
 ## Python API
 
