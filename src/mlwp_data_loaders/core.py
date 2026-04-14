@@ -7,12 +7,6 @@ import importlib.util
 from pathlib import Path
 from typing import Any, Callable
 
-_TRAIT_ATTR_FORMAT = "mlwp_{}_trait"
-
-TIME_TRAIT_ATTR = _TRAIT_ATTR_FORMAT.format("time")
-SPACE_TRAIT_ATTR = _TRAIT_ATTR_FORMAT.format("space")
-UNCERTAINTY_TRAIT_ATTR = _TRAIT_ATTR_FORMAT.format("uncertainty")
-
 
 def get_loader_func(loader: str) -> Callable[..., Any]:
     """Get the load_dataset function from a loader module.

@@ -88,7 +88,7 @@ Each loader module must define a function and assign the correct trait profile a
 
 ```python
 import xarray as xr
-from mlwp_data_loaders.core import SPACE_TRAIT_ATTR, TIME_TRAIT_ATTR, UNCERTAINTY_TRAIT_ATTR
+from mlwp_data_specs.api import SPACE_TRAIT_ATTR, TIME_TRAIT_ATTR, UNCERTAINTY_TRAIT_ATTR
 
 def load_dataset(path: str | list[str], **kwargs) -> xr.Dataset:
     if isinstance(path, list):

@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pooch
 import pytest
-
-from mlwp_data_loaders.api import load_and_validate_dataset
-from mlwp_data_loaders.core import (
+from mlwp_data_specs.api import (
     SPACE_TRAIT_ATTR,
     TIME_TRAIT_ATTR,
     UNCERTAINTY_TRAIT_ATTR,
 )
+
+from mlwp_data_loaders.api import load_and_validate_dataset
 from mlwp_data_loaders.mxalign_api import validate_dataset_with_mxalign
 
 HARP_DATA_URL = "https://raw.githubusercontent.com/harphub/harpData/master/inst/OBSTABLE/OBSTABLE_2019.sqlite"

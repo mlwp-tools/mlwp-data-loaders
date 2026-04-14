@@ -6,8 +6,7 @@ import sqlite3
 
 import pandas as pd
 import xarray as xr
-
-from mlwp_data_loaders.core import (
+from mlwp_data_specs.api import (
     SPACE_TRAIT_ATTR,
     TIME_TRAIT_ATTR,
     UNCERTAINTY_TRAIT_ATTR,

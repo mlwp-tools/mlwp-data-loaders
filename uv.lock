@@ -1450,7 +1450,7 @@ requires-dist = [
     { name = "fsspec" },
     { name = "h5netcdf" },
     { name = "loguru" },
-    { name = "mlwp-data-specs", git = "https://github.com/mlwp-tools/mlwp-data-specs?rev=3a7529b" },
+    { name = "mlwp-data-specs", git = "https://github.com/mlwp-tools/mlwp-data-specs?rev=059f382" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0.0" },
     { name = "s3fs" },
     { name = "xarray" },
@@ -1473,7 +1473,7 @@ test = [
 [[package]]
 name = "mlwp-data-specs"
 version = "0.1.0"
-source = { git = "https://github.com/mlwp-tools/mlwp-data-specs?rev=3a7529b#3a7529bbaa32ab705b0feb24f0d3928e98f99029" }
+source = { git = "https://github.com/mlwp-tools/mlwp-data-specs?rev=059f382#059f3820134e0ebff4deb9180dc5a0da18399289" }
 dependencies = [
     { name = "fsspec" },
     { name = "loguru" },

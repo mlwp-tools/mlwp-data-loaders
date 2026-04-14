@@ -40,8 +40,8 @@ where = ["src"]
 testpaths = ["tests"]
 
 [tool.uv.sources]
-mlwp-data-specs = { git = "https://github.com/mlwp-tools/mlwp-data-specs", rev = "3a7529b" }
 mxalign = { git = "https://github.com/mlwp-tools/mxalign", rev = "e2232d93275c7508897a7ddb0cce8b508665f24c" }
+mlwp-data-specs = { git = "https://github.com/mlwp-tools/mlwp-data-specs", rev = "059f382" }
 
 [dependency-groups]
 dev = [

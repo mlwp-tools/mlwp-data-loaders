@@ -8,12 +8,7 @@ import xarray as xr
 from mlwp_data_specs import validate_dataset
 from mlwp_data_specs.specs.reporting import ValidationReport
 
-from .core import (
-    SPACE_TRAIT_ATTR,
-    TIME_TRAIT_ATTR,
-    UNCERTAINTY_TRAIT_ATTR,
-    get_loader_func,
-)
+from .core import get_loader_func
 
 
 def load_and_validate_dataset(
@@ -57,23 +52,7 @@ def load_and_validate_dataset(
     if not isinstance(ds, xr.Dataset):
         ds = ds.to_dataset()
 
-    # All data loaders must explicitly define these three trait attributes
-    # on the returned xarray dataset.
-    try:
-        time_trait = ds.attrs[TIME_TRAIT_ATTR]
-        space_trait = ds.attrs[SPACE_TRAIT_ATTR]
-        uncertainty_trait = ds.attrs[UNCERTAINTY_TRAIT_ATTR]
-    except KeyError as exc:
-        raise ValueError(
-            f"Loader {loader!r} returned a dataset missing required trait attribute: {exc}"
-        ) from exc
-
-    report = validate_dataset(
-        ds,
-        time=time_trait,
-        space=space_trait,
-        uncertainty=uncertainty_trait,
-    )
+    report = validate_dataset(ds)
 
     if return_validation_report:
         return ds, report
