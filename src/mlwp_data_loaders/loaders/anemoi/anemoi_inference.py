@@ -60,6 +60,19 @@ def load_dataset(
         .swap_dims({"time": "lead_time"})
     )
 
+    # Set the correct metadata
+    ds_out.coords["reference_time"].attrs["standard_name"] = "time"
+    ds_out.coords["lead_time"].attrs.update(
+        {"standard_name": "forecast_period", "units": "hours"}
+    )
+    ds_out.coords["latitude"].attrs.update(
+        {"standard_name": "latitude", "units": "degrees_north"}
+    )
+    ds_out.coords["longitude"].attrs.update(
+        {"standard_name": "longitude", "units": "degrees_east"}
+    )
+
+    # Add the traits
     ds_out.attrs[TIME_TRAIT_ATTR] = "forecast"
     ds_out.attrs[SPACE_TRAIT_ATTR] = "grid"
     ds_out.attrs[UNCERTAINTY_TRAIT_ATTR] = "deterministic"
