@@ -1,0 +1,111 @@
+from typing import Any
+
+import xarray as xr
+from mlwp_data_specs.api import (
+    SPACE_TRAIT_ATTR,
+    TIME_TRAIT_ATTR,
+    UNCERTAINTY_TRAIT_ATTR,
+)
+
+try:
+    import cfgrib  # noqa: F401
+except ImportError as e:
+    raise ImportError("Please install the cfgrib package to load IFS-Forecasts") from e
+
+_UNSET = object()
+
+
+def load_dataset(
+    paths: str | list[str],
+    chunks: dict | None = None,  # type: ignore[assignment]
+    **kwargs: Any,
+) -> xr.Dataset:
+    """
+    Load IFS forecast datasets from GRIB files.
+
+    Parameters
+    ----------
+    paths : str or list of str
+        Path or list of paths to the GRIB files.
+    chunks : dict or None, optional
+        Chunk sizes for dask arrays. Pass ``None`` to load eagerly without chunking.
+        Defaults to ``{"time": 1, "step": -1, "values": -1}``.
+    **kwargs
+        Additional keyword arguments passed to `xr.open_mfdataset` (or `xr.open_dataset`
+        when ``chunks=None``).
+
+    Returns
+    -------
+    xr.Dataset
+        The loaded and pre-processed xarray Dataset with renamed dimensions and coordinates.
+    """
+    paths = [paths] if isinstance(paths, str) else paths
+
+    if chunks is None:
+        # open_mfdataset requires dask; open individually and concat when chunks=None
+        ds = xr.concat(
+            [_preprocess(xr.open_dataset(p, engine="cfgrib", **kwargs)) for p in paths],
+            dim="time",
+            coords="minimal",
+        )
+    else:
+        ds = xr.open_mfdataset(
+            paths,
+            preprocess=_preprocess,
+            combine="nested",
+            concat_dim="time",
+            chunks=chunks,
+            **kwargs,
+        )
+
+    ds.coords["longitude"] = (ds.coords["longitude"] + 180.0) % 360.0 - 180.0
+
+    rename_dims = {
+        "time": "reference_time",
+        "step": "lead_time",
+        "values": "grid_index",
+    }
+    rename_vars = {
+        "time": "reference_time",
+        "step": "lead_time",
+    }
+
+    if "number" in ds.dims and "number" in ds.coords:
+        rename_dims["number"] = "member"
+        rename_vars["number"] = "member"
+    else:
+        ds = ds.drop_vars("number", errors="ignore")
+
+    ds = ds.rename_dims({k: v for k, v in rename_dims.items() if k in ds.dims})
+    ds = ds.rename_vars({k: v for k, v in rename_vars.items() if k in ds.variables})
+
+    if "surface" in ds.variables:
+        ds = ds.drop_vars("surface")
+
+    ds.coords["lead_time"].attrs.update(
+        {"standard_name": "forecast_period", "units": "hours"}
+    )
+
+    if "member" in ds.dims:
+        uncertainty = "ensemble"
+    elif "quantile" in ds.dims:
+        uncertainty = "quantile"
+    else:
+        uncertainty = "deterministic"
+
+    ds = ds.transpose("reference_time", "lead_time", ...)
+
+    ds.attrs[TIME_TRAIT_ATTR] = "forecast"
+    ds.attrs[SPACE_TRAIT_ATTR] = "grid"
+    ds.attrs[UNCERTAINTY_TRAIT_ATTR] = uncertainty
+
+    return ds
+
+
+def _preprocess(ds: xr.Dataset) -> xr.Dataset:
+    """Drop valid_time before concatenation.
+
+    valid_time is reference_time + lead_time and differs across files with different
+    reference times, making it incompatible as a shared coordinate during concat.
+    """
+    return ds.drop_vars("valid_time", errors="ignore")
