@@ -22,6 +22,9 @@ dependencies = [
 profile = "black"
 
 [project.optional-dependencies]
+ifs = [
+  "cfgrib",
+]
 test = [
   "pytest>=8.0.0",
   "certifi>=2021.10.8",
