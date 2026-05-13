@@ -1443,6 +1443,7 @@ dev = [
     { name = "pytest" },
 ]
 test = [
+    { name = "cfgrib" },
     { name = "mxalign" },
     { name = "pooch" },
 ]
@@ -1470,6 +1471,7 @@ dev = [
     { name = "pytest", specifier = ">=9.0.2" },
 ]
 test = [
+    { name = "cfgrib" },
     { name = "mxalign", git = "https://github.com/mlwp-tools/mxalign?rev=e2232d93275c7508897a7ddb0cce8b508665f24c" },
     { name = "pooch" },
 ]

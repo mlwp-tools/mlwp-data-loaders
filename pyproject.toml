@@ -56,4 +56,5 @@ dev = [
 test = [
     "mxalign",
     "pooch",
+    "cfgrib",
 ]
