@@ -12,8 +12,6 @@ try:
 except ImportError as e:
     raise ImportError("Please install the cfgrib package to load IFS-Forecasts") from e
 
-_UNSET = object()
-
 
 def load_dataset(
     paths: str | list[str],
