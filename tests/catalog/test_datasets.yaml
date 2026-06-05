@@ -1,0 +1,18 @@
+sources:
+  anemoi_datasets:
+    description: Datasets loaded by the anemoi-datasets loader
+    driver: yaml_file_cat
+    args:
+      path: "{{ CATALOG_DIR }}/anemoi_datasets.yaml"
+
+  anemoi_inference:
+    description: Datasets loaded by the anemoi-inference loader
+    driver: yaml_file_cat
+    args:
+      path: "{{ CATALOG_DIR }}/anemoi_inference.yaml"
+
+  harp_obstable:
+    description: Datasets loaded by the harp.obstable loader
+    driver: yaml_file_cat
+    args:
+      path: "{{ CATALOG_DIR }}/harp_obstable.yaml"

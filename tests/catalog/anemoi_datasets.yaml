@@ -1,0 +1,15 @@
+sources:
+  cerra_sample:
+    description: >
+      Small CERRA sample dataset stored on EWC (European Weather Cloud)
+      S3-compatible object store, used for testing anemoi-datasets loading.
+    driver: mlwp_loader
+    args:
+      dataset_path: s3://mlwp-sample-datasets/anemoi-datasets/cerra-rr-an-oper-0001-mars-5p5km-2017-2017-6h-v3-testing.zarr/
+      loader: mlwp_data_loaders.loaders.anemoi.anemoi_datasets
+      storage_options:
+        endpoint_url: https://object-store.os-api.cci2.ecmwf.int
+        anon: true
+      chunks: null
+    metadata:
+      url: https://object-store.os-api.cci2.ecmwf.int

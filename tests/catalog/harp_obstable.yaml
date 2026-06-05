@@ -1,0 +1,11 @@
+sources:
+  observation_table:
+    description: >
+      HARP SQLite observation table test dataset from the harpData repository.
+    driver: mlwp_loader
+    args:
+      dataset_path: "simplecache::https://raw.githubusercontent.com/harphub/harpData/master/inst/OBSTABLE/OBSTABLE_2019.sqlite"
+      loader: mlwp_data_loaders.loaders.harp.obstable
+    metadata:
+      url: https://github.com/harphub/harpData
+      hash: bdab991c287a41871488456d1a9d697942aa3a612800a88264defa312a9d637b

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import sqlite3
 
+import fsspec
 import pandas as pd
 import xarray as xr
+from loguru import logger
 from mlwp_data_specs.api import (
     SPACE_TRAIT_ATTR,
     TIME_TRAIT_ATTR,
@@ -19,6 +21,31 @@ COORDS = {
     "code": "SID",
     "altitude": "elev",
 }
+
+
+def _resolve_path(path: str) -> str:
+    """Return a local file path, resolving fsspec-protocol URIs if needed.
+
+    ``sqlite3.connect()`` requires a local file path and cannot open
+    HTTP URLs directly. We use fsspec to resolve protocols like
+    ``simplecache::`` (which downloads remote files to a local cache)
+    before handing the path to sqlite3.
+    """
+    with fsspec.open(path, "rb") as f:
+        resolved = getattr(f, "name", path)
+
+    if resolved.startswith(("http://", "https://")):
+        logger.error(
+            "Cannot open remote path with sqlite3. "
+            "Prefix the path with 'simplecache::' to cache it locally, "
+            "or download the file manually."
+        )
+        raise ValueError(
+            f"Cannot open remote path {path!r} with sqlite3. "
+            f"Prefix with 'simplecache::' or download locally."
+        )
+
+    return resolved
 
 
 def load_dataset(
@@ -49,6 +76,8 @@ def load_dataset(
         path = paths[0]
     else:
         path = paths
+
+    path = _resolve_path(path)
 
     # Connect to the sqlite file
     conn = sqlite3.connect(path)

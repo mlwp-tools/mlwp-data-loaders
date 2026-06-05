@@ -105,3 +105,55 @@ def load_dataset(path: str | list[str], **kwargs) -> xr.Dataset:
 
     return ds
 ```
+
+## Intake Integration
+
+`mlwp-data-loaders` ships an [Intake](https://intake.readthedocs.io/) driver that wraps any mlwp loader module, making datasets discoverable via Intake catalogs.
+
+Install with Intake support:
+
+```bash
+uv pip install mlwp-data-loaders[intake]
+```
+
+### Using the Intake driver
+
+Point an Intake catalog at any loader module (bundled or custom):
+
+```yaml
+# catalog.yaml
+sources:
+  my_data:
+    driver: mlwp_loader
+    args:
+      dataset_path: /path/to/data.zarr
+      loader: mlwp_data_loaders.loaders.anemoi.anemoi_datasets
+```
+
+```python
+import intake
+cat = intake.open_catalog("catalog.yaml")
+ds = cat["my_data"].read()  # -> xr.Dataset
+```
+
+Both `read()` and `to_dask()` delegate to the same `load_dataset()` call with the `chunks` value from the catalog entry. If you want dask-backed arrays from `to_dask()`, set `chunks: auto` (or an explicit chunk spec) in the catalog args.
+
+### Test datasets catalog
+
+The repository includes a catalog with the datasets used in the test suite,
+structured by loader type:
+
+```python
+import intake
+cat = intake.open_catalog("tests/catalog/test_datasets.yaml")
+ds = cat["anemoi_datasets"]["cerra_sample"].read()
+ds = cat["harp_obstable"]["observation_table"].read()
+```
+
+Available entries:
+
+| Access path | Loader | Description |
+|-------------|--------|-------------|
+| `cat["anemoi_datasets"]["cerra_sample"]` | `anemoi_datasets` | CERRA sample Zarr on EWC object store |
+| `cat["anemoi_inference"]["..."]` | `anemoi_inference` | (no test datasets yet) |
+| `cat["harp_obstable"]["observation_table"]` | `harp.obstable` | HARP SQLite observation table |

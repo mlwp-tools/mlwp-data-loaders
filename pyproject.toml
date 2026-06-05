@@ -16,6 +16,7 @@ dependencies = [
   "zarr>2,<3",
   "h5netcdf",
   "mlwp-data-specs",
+  "dask>=2026.3.0",
 ]
 
 [tool.isort]
@@ -26,6 +27,13 @@ test = [
   "pytest>=8.0.0",
   "certifi>=2021.10.8",
 ]
+intake = [
+  "intake>=0.7",
+  "jinja2",
+]
+
+[project.entry-points."intake.drivers"]
+mlwp_loader = "mlwp_data_loaders.intake_driver:MLWPLoaderDriver"
 
 [project.scripts]
 "mlwp.load_and_validate_dataset" = "mlwp_data_loaders.cli:main"
