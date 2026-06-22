@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
-pytest.importorskip("cfgrib")
 from mlwp_data_specs.api import (
     SPACE_TRAIT_ATTR,
     TIME_TRAIT_ATTR,
@@ -13,6 +11,8 @@ from mlwp_data_specs.api import (
 
 from mlwp_data_loaders.api import load_and_validate_dataset
 from mlwp_data_loaders.mxalign_api import validate_dataset_with_mxalign
+
+pytest.importorskip("cfgrib")
 
 DET_FILES = [
     "/scratch/cu0k/ifs-example/ifs_det_fcst_20260101.grib",
