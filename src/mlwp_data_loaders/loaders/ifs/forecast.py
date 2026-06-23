@@ -1,3 +1,12 @@
+"""
+Loader for IFS-forecasts as provided by the ECMWF and typically retrieved
+from MARS as grib-file(s).
+These grib files typically have dimensions (step, values and optionally number).
+If the grib file contains more than one type of vertical level please provide the ``backend_kwarg``.
+E.g. ```backend_kwargs={"filter_by_keys": {"typeOfLevel": "surface",}}```
+"""
+
+
 from typing import Any
 
 import xarray as xr
