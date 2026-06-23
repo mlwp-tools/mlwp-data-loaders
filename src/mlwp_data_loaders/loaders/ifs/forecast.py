@@ -51,14 +51,14 @@ def load_dataset(
     if chunks is None:
         # open_mfdataset requires dask; open individually and concat when chunks=None
         ds = xr.concat(
-            [_preprocess(xr.open_dataset(p, engine="cfgrib", **kwargs)) for p in paths],
+            [_drop_valid_time_var(xr.open_dataset(p, engine="cfgrib", **kwargs)) for p in paths],
             dim="time",
             coords="minimal",
         )
     else:
         ds = xr.open_mfdataset(
             paths,
-            preprocess=_preprocess,
+            preprocess=_drop_valid_time_var,
             combine="nested",
             concat_dim="time",
             chunks=chunks,
@@ -109,7 +109,7 @@ def load_dataset(
     return ds
 
 
-def _preprocess(ds: xr.Dataset) -> xr.Dataset:
+def _drop_valid_time_var(ds: xr.Dataset) -> xr.Dataset:
     """Drop valid_time before concatenation.
 
     valid_time is reference_time + lead_time and differs across files with different
