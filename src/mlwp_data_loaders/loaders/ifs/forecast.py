@@ -51,7 +51,10 @@ def load_dataset(
     if chunks is None:
         # open_mfdataset requires dask; open individually and concat when chunks=None
         ds = xr.concat(
-            [_drop_valid_time_var(xr.open_dataset(p, engine="cfgrib", **kwargs)) for p in paths],
+            [
+                _drop_valid_time_var(xr.open_dataset(p, engine="cfgrib", **kwargs))
+                for p in paths
+            ],
             dim="time",
             coords="minimal",
         )
