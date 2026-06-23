@@ -41,6 +41,9 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "network: marks tests that require network access (e.g. fetching sample data from object storage)",
+]
 
 [tool.uv.sources]
 mxalign = { git = "https://github.com/mlwp-tools/mxalign", rev = "e2232d93275c7508897a7ddb0cce8b508665f24c" }
