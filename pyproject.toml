@@ -24,7 +24,7 @@ profile = "black"
 [project.optional-dependencies]
 ifs = [
   "cfgrib",
-  "ecmwflibs",
+  "eccodeslib",
 ]
 test = [
   "pytest>=8.0.0",
