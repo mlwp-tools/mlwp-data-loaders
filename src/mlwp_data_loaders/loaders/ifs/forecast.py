@@ -7,6 +7,8 @@ E.g. ```backend_kwargs={"filter_by_keys": {"typeOfLevel": "surface",}}```
 """
 
 
+import importlib.util
+import warnings
 from typing import Any
 
 import xarray as xr
@@ -47,6 +49,16 @@ def load_dataset(
         The loaded and pre-processed xarray Dataset with renamed dimensions and coordinates.
     """
     paths = [paths] if isinstance(paths, str) else paths
+
+    if chunks is not None and not _dask_is_available():
+        warnings.warn(
+            "dask is not installed but `chunks` was provided. Chunked loading via "
+            "`xr.open_mfdataset` requires dask. Falling back to eager loading "
+            "(equivalent to `chunks=None`). Install dask to enable chunked loading.",
+            UserWarning,
+            stacklevel=2,
+        )
+        chunks = None
 
     if chunks is None:
         # open_mfdataset requires dask; open individually and concat when chunks=None
@@ -110,6 +122,11 @@ def load_dataset(
     ds.attrs[UNCERTAINTY_TRAIT_ATTR] = uncertainty
 
     return ds
+
+
+def _dask_is_available() -> bool:
+    """Return whether dask is installed without importing it."""
+    return importlib.util.find_spec("dask") is not None
 
 
 def _drop_valid_time_var(ds: xr.Dataset) -> xr.Dataset:
