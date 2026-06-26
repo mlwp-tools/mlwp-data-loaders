@@ -17,7 +17,9 @@ pytest.importorskip("cfgrib")
 
 LOADER = "mlwp_data_loaders.loaders.ifs.forecast"
 
-BASE_URL = "https://object-store.os-api.cci2.ecmwf.int/mlwp-sample-datasets/ifs/2026-06-19"
+BASE_URL = (
+    "https://object-store.os-api.cci2.ecmwf.int/mlwp-sample-datasets/ifs/2026-06-19"
+)
 
 DET_FILES = {
     "deterministic/ifs_det_fcst_20260101.grib": "md5:6c65edd213a23dc423dcee7c88b84183",
