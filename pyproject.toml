@@ -15,6 +15,7 @@ dependencies = [
   "s3fs",
   "zarr>2,<3",
   "h5netcdf",
+  "h5py",
   "mlwp-data-specs",
 ]
 
@@ -47,7 +48,6 @@ markers = [
 ]
 
 [tool.uv.sources]
-mxalign = { git = "https://github.com/mlwp-tools/mxalign", rev = "e2232d93275c7508897a7ddb0cce8b508665f24c" }
 mlwp-data-specs = { git = "https://github.com/mlwp-tools/mlwp-data-specs", rev = "059f382" }
 
 [dependency-groups]
@@ -58,7 +58,6 @@ dev = [
     "pooch>=1.9.0",
 ]
 test = [
-    "mxalign",
     "pooch",
     "cfgrib",
 ]

@@ -13,6 +13,7 @@ def load_dataset(
     chunks: str | dict | None = "auto",
     engine: str = "h5netcdf",
     parallel: bool = True,
+    storage_options: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> xr.Dataset:
     """
@@ -27,9 +28,11 @@ def load_dataset(
     engine : str, default: "h5netcdf"
         Engine to use for reading the files.
     parallel : bool, default: True
-        Whether to open files in parallel using dask.
+        Kept for API compatibility.
+    storage_options : dict of str to Any, optional
+        Storage options passed to xarray when opening remote files.
     **kwargs
-        Additional keyword arguments passed to `xr.open_mfdataset`.
+        Additional keyword arguments passed to `xr.open_dataset`.
 
     Returns
     -------
@@ -42,22 +45,43 @@ def load_dataset(
     # (e.g. file 1 is Jan, file 2 is Feb), extracting `times` from only `paths[0]`
     # means the `lead_times` array will be shorter than the concatenated time dimension.
     # We may need to rethink this, but keeping it for now to match original behavior.
-    times = xr.open_dataset(paths[0], engine=engine)["time"].values
+    times = xr.open_dataset(paths[0], engine=engine, storage_options=storage_options)[
+        "time"
+    ].values
     lead_times = times - times[0]
 
-    ds = xr.open_mfdataset(
-        paths,
-        preprocess=_preprocess,
-        chunks=chunks,
-        engine=engine,
-        parallel=parallel,
-        **kwargs,
+    datasets = [
+        _preprocess(
+            xr.open_dataset(
+                path,
+                chunks=chunks,
+                engine=engine,
+                storage_options=storage_options,
+                **kwargs,
+            )
+        )
+        for path in paths
+    ]
+
+    ds = (
+        datasets[0] if len(datasets) == 1 else xr.concat(datasets, dim="reference_time")
     )
 
     ds_out = (
         ds.assign_coords({"lead_time": ("time", lead_times)})
         .rename_dims({"values": "grid_index"})
         .swap_dims({"time": "lead_time"})
+    )
+
+    ds_out.coords["reference_time"].attrs["standard_name"] = "forecast_reference_time"
+    ds_out.coords["lead_time"].attrs.update(
+        {"standard_name": "forecast_period", "units": "hours"}
+    )
+    ds_out.coords["longitude"].attrs.update(
+        {"standard_name": "longitude", "units": "degrees_east"}
+    )
+    ds_out.coords["latitude"].attrs.update(
+        {"standard_name": "latitude", "units": "degrees_north"}
     )
 
     ds_out.attrs[TIME_TRAIT_ATTR] = "forecast"

@@ -1,21 +1,21 @@
-"""Integration tests for the built-in ``anemoi-datasets`` loader."""
+"""Integration tests for the built-in ``anemoi-inference`` loader."""
 
 from __future__ import annotations
 
 from mlwp_data_loaders.api import load_and_validate_dataset
 
-# Use small CERRA sample dataset stored on EWC (European Weather Cloud)
-# S3-compatible object store for testing.
-DATASET_PATH = (
-    "s3://mlwp-sample-datasets/anemoi-datasets/"
-    "cerra-rr-an-oper-0001-mars-5p5km-2017-2017-6h-v3-testing.zarr/"
-)
+DATASET_PATH = [
+    "s3://mlwp-sample-datasets/anemoi-inference/unknown-revision/"
+    "anemoi-inference-lam_2020020100.nc",
+    "s3://mlwp-sample-datasets/anemoi-inference/unknown-revision/"
+    "anemoi-inference-lam_2020020200.nc",
+]
 ENDPOINT_URL = "https://object-store.os-api.cci2.ecmwf.int"
-LOADER = "mlwp_data_loaders.loaders.anemoi.anemoi_datasets"
+LOADER = "mlwp_data_loaders.loaders.anemoi.anemoi_inference"
 
 
-def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
-    """The anemoi-datasets loader can open and validate the sample Zarr store."""
+def test_load_dataset_opens_anemoi_inference_from_ewc() -> None:
+    """The anemoi-inference loader can open and validate the sample NetCDF files."""
     storage_options: dict[str, object] = {
         "endpoint_url": ENDPOINT_URL,
         "anon": True,
@@ -26,6 +26,7 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
         loader=LOADER,
         storage_options=storage_options,
         chunks=None,
+        parallel=False,
         return_validation_report=True,
     )
 

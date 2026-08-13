@@ -4,14 +4,8 @@ from __future__ import annotations
 
 import pooch
 import pytest
-from mlwp_data_specs.api import (
-    SPACE_TRAIT_ATTR,
-    TIME_TRAIT_ATTR,
-    UNCERTAINTY_TRAIT_ATTR,
-)
 
 from mlwp_data_loaders.api import load_and_validate_dataset
-from mlwp_data_loaders.mxalign_api import validate_dataset_with_mxalign
 
 HARP_DATA_URL = "https://raw.githubusercontent.com/harphub/harpData/master/inst/OBSTABLE/OBSTABLE_2019.sqlite"
 HARP_DATA_HASH = "bdab991c287a41871488456d1a9d697942aa3a612800a88264defa312a9d637b"
@@ -34,18 +28,6 @@ def test_load_dataset_opens_harp_obstable(obstable_path: str) -> None:
         loader=LOADER,
         return_validation_report=True,
     )
-
-    # Note: mxalign validation is temporarily kept here during early development
-    # to ensure `mlwp-data-specs` behaves identically. It will eventually be removed.
-    report_mxalign = validate_dataset_with_mxalign(
-        ds,
-        time=ds.attrs.get(TIME_TRAIT_ATTR),
-        space=ds.attrs.get(SPACE_TRAIT_ATTR),
-        uncertainty=ds.attrs.get(UNCERTAINTY_TRAIT_ATTR),
-    )
-    if report_mxalign.has_fails():
-        report_mxalign.console_print()
-    assert not report_mxalign.has_fails()
 
     if report_specs.has_fails():
         report_specs.console_print()

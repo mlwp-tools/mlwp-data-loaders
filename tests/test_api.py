@@ -5,32 +5,8 @@ from __future__ import annotations
 import pytest
 import xarray as xr
 
-import mlwp_data_loaders.mxalign_api as mxalign_api
 from mlwp_data_loaders.api import load_and_validate_dataset
 from mlwp_data_loaders.core import get_loader_func
-
-
-def _forecast_grid_ds() -> xr.Dataset:
-    """Create a forecast + grid dataset for loader tests."""
-    ds = xr.Dataset(
-        coords={
-            "reference_time": ("reference_time", [0]),
-            "lead_time": ("lead_time", [1]),
-            "longitude": ("longitude", [10.0, 11.0]),
-            "latitude": ("latitude", [60.0, 61.0]),
-        }
-    )
-    ds.coords["reference_time"].attrs["standard_name"] = "forecast_reference_time"
-    ds.coords["lead_time"].attrs.update(
-        {"standard_name": "forecast_period", "units": "hours"}
-    )
-    ds.coords["longitude"].attrs.update(
-        {"standard_name": "longitude", "units": "degrees_east"}
-    )
-    ds.coords["latitude"].attrs.update(
-        {"standard_name": "latitude", "units": "degrees_north"}
-    )
-    return ds
 
 
 def test_get_loader_func_raises_missing_load_dataset(tmp_path) -> None:
@@ -109,37 +85,3 @@ def test_load_dataset_returns_report(tmp_path, monkeypatch: pytest.MonkeyPatch) 
     assert isinstance(ds, xr.Dataset)
     assert not report.has_fails()
     assert ds.attrs.get("mlwp_time_trait") == "forecast"
-
-
-def test_validate_dataset_with_mxalign_returns_fail_report_for_invalid_dims(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """mxalign validation failures are converted into report entries."""
-
-    def mock_load_symbols():
-        def mock_validate(ds, props):
-            raise ValueError("Mock mxalign validation failed")
-
-        return {
-            "Properties": lambda time, space, uncertainty: "props",
-            "Space": lambda x: x,
-            "Time": lambda x: x,
-            "Uncertainty": lambda x: x,
-            "validate_dataset": mock_validate,
-        }
-
-    monkeypatch.setattr(
-        "mlwp_data_loaders.mxalign_api._load_mxalign_validation_symbols",
-        mock_load_symbols,
-    )
-
-    report = mxalign_api.validate_dataset_with_mxalign(
-        _forecast_grid_ds(),
-        time="observation",
-        space="point",
-        uncertainty="deterministic",
-    )
-
-    assert report.has_fails()
-    assert len(report.results) == 1
-    assert report.results[0].section == "MXAlign Properties"
