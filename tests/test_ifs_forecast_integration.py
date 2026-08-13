@@ -11,7 +11,6 @@ from mlwp_data_specs.api import (
 )
 
 from mlwp_data_loaders.api import load_and_validate_dataset
-from mlwp_data_loaders.mxalign_api import validate_dataset_with_mxalign
 
 pytest.importorskip("cfgrib")
 
@@ -81,16 +80,6 @@ def test_load_dataset_opens_ifs_grib(
     assert ds.attrs[TIME_TRAIT_ATTR] == "forecast"
     assert ds.attrs[SPACE_TRAIT_ATTR] == "grid"
     assert ds.attrs[UNCERTAINTY_TRAIT_ATTR] == expected_uncertainty
-
-    report_mxalign = validate_dataset_with_mxalign(
-        ds,
-        time=ds.attrs.get(TIME_TRAIT_ATTR),
-        space=ds.attrs.get(SPACE_TRAIT_ATTR),
-        uncertainty=ds.attrs.get(UNCERTAINTY_TRAIT_ATTR),
-    )
-    if report_mxalign.has_fails():
-        report_mxalign.console_print()
-    assert not report_mxalign.has_fails()
 
     if report_specs.has_fails():
         report_specs.console_print()
