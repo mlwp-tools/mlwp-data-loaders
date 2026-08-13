@@ -21,7 +21,9 @@ from mlwp_data_specs.api import (
 try:
     import cfgrib  # noqa: F401
 except ImportError as e:
-    raise ImportError("Please install the cfgrib package to load IFS-Forecasts") from e
+    raise ImportError(
+        "Please install the cfgrib package to load IFS-Forecasts. This can be done by installing the `ifs` optional extra dependencies of `mlwp-data-loaders` with e.g. `pip install mlwp-data-loaders[ifs]`"
+    ) from e
 
 
 def load_dataset(
