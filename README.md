@@ -78,15 +78,22 @@ Each loader module must define a function and assign the correct trait profile a
 1. `load_dataset(path: str | list[str], **kwargs) -> xr.Dataset`
    - **Required**. Handles opening the path(s), preprocessing, concatenating, and postprocessing, returning a single normalized `xarray.Dataset`.
 2. Attributes attached to the dataset
-   - Must set `mlwp_time_trait` (e.g. `"forecast"`).
-   - Must set `mlwp_space_trait` (e.g. `"grid"`).
-   - Must set `mlwp_uncertainty_trait` (e.g. `"deterministic"`).
+   - Must set `mlwp_time_trait` (e.g. `Time.FORECAST`).
+   - Must set `mlwp_space_trait` (e.g. `Space.GRID`).
+   - Must set `mlwp_uncertainty_trait` (e.g. `Uncertainty.DETERMINISTIC`).
 
 ### Example Loader (`my_loader.py`)
 
 ```python
 import xarray as xr
-from mlwp_data_specs.api import SPACE_TRAIT_ATTR, TIME_TRAIT_ATTR, UNCERTAINTY_TRAIT_ATTR
+from mlwp_data_specs.api import (
+    SPACE_TRAIT_ATTR,
+    TIME_TRAIT_ATTR,
+    UNCERTAINTY_TRAIT_ATTR,
+    Space,
+    Time,
+    Uncertainty,
+)
 
 def load_dataset(path: str | list[str], **kwargs) -> xr.Dataset:
     if isinstance(path, list):
@@ -99,9 +106,9 @@ def load_dataset(path: str | list[str], **kwargs) -> xr.Dataset:
         ds = ds.rename({"time": "valid_time"})
 
     # Assign required traits for validation
-    ds.attrs[TIME_TRAIT_ATTR] = "observation"
-    ds.attrs[SPACE_TRAIT_ATTR] = "grid"
-    ds.attrs[UNCERTAINTY_TRAIT_ATTR] = "deterministic"
+    ds.attrs[TIME_TRAIT_ATTR] = Time.OBSERVATION
+    ds.attrs[SPACE_TRAIT_ATTR] = Space.GRID
+    ds.attrs[UNCERTAINTY_TRAIT_ATTR] = Uncertainty.DETERMINISTIC
 
     return ds
 ```
