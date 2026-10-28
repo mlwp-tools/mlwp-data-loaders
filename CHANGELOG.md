@@ -19,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `anemoi-datasets` loader builds a dask graph whose size no longer depends on the length of the record: all variables are split lazily from one shared read, so each on-disk chunk is read once per compute, using zarr's fast basic-indexing path. **Breaking:** the `chunks` argument is removed; dask chunks follow the store's on-disk time chunks. @michielv
 - `dask` is now a required dependency. @mpvginde
 - `load_and_validate_dataset` accepts a Python callable as `loader`, in addition to a `.py` file path or a module path, so a loader function can be passed in directly without writing a module. @mpvginde
+- The HARP obstable loader is lazy: loading reads only the valid times and the station coordinates, instead of the whole table into memory. Each dask chunk holds a range of valid times of all stations, as many as fit in dask's `array.chunk-size` with all requested variables, read with one indexed query; the variables are split from that shared read, so the graph has `2 + n_variables` layers whatever the length of the record. `variables` can also be a single name, and `valid_time` is `datetime64[ns]`. @mpvginde
+- The HARP obstable loader takes each station's latitude, longitude and altitude from its latest row. **Breaking:** they change for stations whose coordinates vary within the table, whose latitude and longitude were the minimum over all rows and whose altitude came from an arbitrary row. @mpvginde
+
+### Fixed
+- The HARP obstable loader opens the file read-only and closes it again: a missing path raises `FileNotFoundError` instead of creating an empty database. Unknown `variables` raise a `ValueError`, and column names are quoted in SQL, so a name such as `10si` is no longer read as the number 10. @mpvginde
 
 ## [0.1.0](https://github.com/mlwp-tools/mlwp-data-loaders/releases/tag/v0.1.0)
 
