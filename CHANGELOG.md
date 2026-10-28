@@ -9,11 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - `variables` argument in the `anemoi-inference` loader to load a subset of the variables. @mpvginde
+- `valid_times` argument (label slice) in the `anemoi-datasets` loader to load part of the record. @mpvginde
+
 
 ### Changed
 - The `anemoi-inference` loader reads only `time` from each file when loading, through h5netcdf directly, instead of opening every file with `xr.open_dataset` (about 3 s per file with 70 variables). Its dask graph no longer depends on the number of files: one layer per variable, with one chunk per file. **Breaking:** the `chunks`, `engine` and `parallel` arguments and the keyword arguments forwarded to `xr.open_dataset` are removed. @mpvginde
 - The `anemoi-inference` loader skips files whose lead times differ from the most common ones (e.g. a run that stopped early) or that lack a requested variable, with a warning, instead of failing. @mpvginde
 - `dask` is now a required dependency. @mpvginde
+- The `anemoi-datasets` loader builds a dask graph whose size no longer depends on the length of the record: all variables are split lazily from one shared read, so each on-disk chunk is read once per compute, using zarr's fast basic-indexing path. **Breaking:** the `chunks` argument is removed; dask chunks follow the store's on-disk time chunks. @michielv
+- `dask` is now a required dependency. @mpvginde
+- `load_and_validate_dataset` accepts a Python callable as `loader`, in addition to a `.py` file path or a module path, so a loader function can be passed in directly without writing a module. @mpvginde
 
 ## [0.1.0](https://github.com/mlwp-tools/mlwp-data-loaders/releases/tag/v0.1.0)
 

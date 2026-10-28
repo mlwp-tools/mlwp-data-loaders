@@ -85,3 +85,79 @@ def test_load_dataset_returns_report(tmp_path, monkeypatch: pytest.MonkeyPatch) 
     assert isinstance(ds, xr.Dataset)
     assert not report.has_fails()
     assert ds.attrs.get("mlwp_time_trait") == "forecast"
+
+
+class _PassingReport:
+    def has_fails(self) -> bool:
+        return False
+
+
+class _FailingReport:
+    def has_fails(self) -> bool:
+        return True
+
+
+def _traits_dataset() -> xr.Dataset:
+    ds = xr.Dataset()
+    ds.attrs["mlwp_time_trait"] = "forecast"
+    ds.attrs["mlwp_space_trait"] = "grid"
+    ds.attrs["mlwp_uncertainty_trait"] = "deterministic"
+    return ds
+
+
+def test_callable_loader_is_used_directly(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A callable loader receives the path and kwargs and its dataset is returned."""
+    monkeypatch.setattr(
+        "mlwp_data_loaders.api.validate_dataset",
+        lambda *args, **kwargs: _PassingReport(),
+    )
+    calls: list[tuple] = []
+
+    def loader(path, **kwargs):
+        calls.append((path, kwargs))
+        return _traits_dataset()
+
+    ds = load_and_validate_dataset(
+        "dummy.zarr", loader=loader, storage_options={"anon": True}
+    )
+
+    assert isinstance(ds, xr.Dataset)
+    assert calls == [("dummy.zarr", {"storage_options": {"anon": True}})]
+
+
+def test_callable_loader_returns_report(monkeypatch: pytest.MonkeyPatch) -> None:
+    """return_validation_report works with a callable loader."""
+    monkeypatch.setattr(
+        "mlwp_data_loaders.api.validate_dataset",
+        lambda *args, **kwargs: _FailingReport(),
+    )
+
+    ds, report = load_and_validate_dataset(
+        "dummy.zarr",
+        loader=lambda path, **kwargs: _traits_dataset(),
+        return_validation_report=True,
+    )  # type: ignore
+
+    assert isinstance(ds, xr.Dataset)
+    assert report.has_fails()
+
+
+def test_callable_loader_validation_failure_raises(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A failing validation raises ValueError for callable loaders too."""
+    monkeypatch.setattr(
+        "mlwp_data_loaders.api.validate_dataset",
+        lambda *args, **kwargs: _FailingReport(),
+    )
+
+    with pytest.raises(ValueError, match="Dataset validation failed"):
+        load_and_validate_dataset(
+            "dummy.zarr", loader=lambda path, **kwargs: _traits_dataset()
+        )
+
+
+def test_loader_of_wrong_type_raises_typeerror() -> None:
+    """A loader that is neither a string nor a callable is rejected."""
+    with pytest.raises(TypeError, match="loader must be a string or a callable"):
+        load_and_validate_dataset("dummy.zarr", loader=123)  # type: ignore[arg-type]
