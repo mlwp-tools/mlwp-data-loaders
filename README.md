@@ -20,6 +20,7 @@ The intended split is:
 The `loader` argument is interpreted as:
 - A Python file path if it ends with `.py`.
 - A Python module path if it contains `.` (e.g. `mlwp_data_loaders.loaders.anemoi.anemoi_inference`).
+- A Python callable, used directly as `loader(dataset_path, **kwargs)`. It must return an `xarray.Dataset` with the trait attributes set (see [Loader Module Contract](#loader-module-contract)).
 
 You can load a dataset and get its validation report natively:
 
@@ -47,6 +48,33 @@ If you don't need the report returned, simply omit `return_validation_report` (d
 ds = load_and_validate_dataset(
     "s3://my-bucket/dataset.zarr",
     loader="mlwp_data_loaders.loaders.anemoi.anemoi_datasets",
+    storage_options={"anon": True},
+)
+```
+
+A loader can also be passed as a function, which avoids writing a module file:
+
+```python
+import xarray as xr
+from mlwp_data_specs.api import (
+    SPACE_TRAIT_ATTR,
+    TIME_TRAIT_ATTR,
+    UNCERTAINTY_TRAIT_ATTR,
+    Space,
+    Time,
+    Uncertainty,
+)
+
+def load_point_observation_dataset(path: str, **kwargs) -> xr.Dataset:
+    ds = xr.open_zarr(path, **kwargs)
+    ds.attrs[TIME_TRAIT_ATTR] = Time.OBSERVATION
+    ds.attrs[SPACE_TRAIT_ATTR] = Space.POINT
+    ds.attrs[UNCERTAINTY_TRAIT_ATTR] = Uncertainty.DETERMINISTIC
+    return ds
+
+ds = load_and_validate_dataset(
+    "s3://my-bucket/dataset.zarr",
+    loader=load_point_observation_dataset,
     storage_options={"anon": True},
 )
 ```

@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `load_and_validate_dataset` accepts a Python callable as `loader`, in addition to a `.py` file path or a module path, so a loader function can be passed in directly without writing a module. @mpvginde
+
 ## [0.1.0](https://github.com/mlwp-tools/mlwp-data-loaders/releases/tag/v0.1.0)
 
 First release of `mlwp-data-loaders`, a package for loading raw MLWP source
