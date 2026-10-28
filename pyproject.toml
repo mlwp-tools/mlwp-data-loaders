@@ -17,6 +17,7 @@ dependencies = [
   "h5netcdf",
   "h5py",
   "mlwp-data-specs",
+  "dask>=2026.1.2",
 ]
 
 [tool.isort]

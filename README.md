@@ -34,6 +34,7 @@ ds, validation_report = load_and_validate_dataset(
         "/path/to/anemoi-inference-20260102T00.nc",
     ],
     loader="mlwp_data_loaders.loaders.anemoi.anemoi_inference",
+    variables=["2t", "msl"],  # optional, defaults to all (time, values) variables
     return_validation_report=True,
 )
 
