@@ -25,7 +25,6 @@ def test_load_dataset_opens_anemoi_store_from_ewc() -> None:
         DATASET_PATH,
         loader=LOADER,
         storage_options=storage_options,
-        chunks=None,
         return_validation_report=True,
     )
 
