@@ -1,8 +1,25 @@
+"""
+Loader for anemoi-datasets Zarr stores.
+
+The store holds a single ``data`` array ``(time, variable, ensemble, cell)``
+whose chunks typically contain one time step of *all* variables. To keep the
+dask graph of the returned dataset small, independent of the length of the
+record and of the number of variables, this loader
+
+1. opens the store without dask, so selections on the backend array are free,
+2. creates one dask array with one chunk per on-disk time chunk, read with
+   basic (slice/integer) indexing only, which lets zarr decode each chunk
+   straight into the output buffer,
+3. splits the variables with one non-materialized ``Blockwise`` layer each,
+   all reading from that shared array, so a compute reads every on-disk chunk
+   once no matter how many variables it needs.
+"""
+
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import xarray as xr
-from loguru import logger
 from mlwp_data_specs.api import (
     SPACE_TRAIT_ATTR,
     TIME_TRAIT_ATTR,
@@ -27,30 +44,38 @@ DROP_VARS = [
     "sin_longitude",
 ]
 
-COORDS = dict(longitude="longitudes", latitude="latitudes", valid_time="dates")
-
 
 def load_dataset(
     path: str,
-    chunks: str | dict | None = "auto",
-    consolidated: bool = False,
     variables: str | list[str] | None = None,
+    valid_times: slice | None = None,
+    consolidated: bool = False,
     storage_options: dict[str, Any] | None = None,
     **kwargs: Any,
 ) -> xr.Dataset:
     """
-    Load Anemoi datasets from Zarr files.
+    Load an anemoi-datasets Zarr store as a lazy, dask-backed dataset.
+
+    Each variable is chunked as one dask chunk per on-disk time chunk (one time
+    step for anemoi-datasets stores) with ``grid_index`` in a single chunk.
+    Larger time chunks are not offered: every chunk holds all variables of the
+    store, so they would multiply the memory and IO of each read.
 
     Parameters
     ----------
     path : str
         Path to the Zarr dataset.
-    chunks : str or dict or None, default: "auto"
-        Chunk size or strategy for dask arrays.
+    variables : str or list of str, optional
+        Variables to load. Defaults to all variables except forcings and
+        constant fields (``DROP_VARS``).
+    valid_times : slice, optional
+        Label slice of valid times to load, inclusive at both ends like
+        ``Dataset.sel`` (e.g. ``slice("2020-01-01", "2020-12-31")``). Defaults
+        to the full record. When computing many variables at once, dask's
+        graph optimization scales with ``n_variables * n_time_steps`` of the
+        loaded record, so subsetting here keeps that cheap.
     consolidated : bool, default: False
         Whether to use consolidated metadata when opening the Zarr store.
-    variables : str or list of str, optional
-        List of variables to select from the dataset. If None, all variables are kept.
     storage_options : dict of str to Any, optional
         Storage options passed to xarray.open_zarr (e.g. for S3 access).
     **kwargs
@@ -59,81 +84,86 @@ def load_dataset(
     Returns
     -------
     xr.Dataset
-        The loaded and post-processed xarray Dataset.
+        ``(valid_time, grid_index)`` variables with latitude/longitude
+        coordinates and the mlwp trait attributes.
     """
-    variables = [variables] if isinstance(variables, str) else variables
-
+    # No dask yet: indexing the backend arrays below only composes an indexer
     ds = xr.open_zarr(
         path,
+        chunks=None,
         consolidated=consolidated,
-        chunks=chunks,
         storage_options=storage_options,
         **kwargs,
     )  # type: ignore
-    ds_postproc = _postprocess(ds)
 
-    if variables:
-        ds_selected = ds_postproc.sel(variable=variables)
-    else:
-        ds_selected = ds_postproc
-        if len(ds_selected["variable"]) > 10:
-            logger.info(
-                f"Transforming anemoi-datasets xr.DataArray with {len(ds_postproc['variable'])} variables "
-                f"to xr.Dataset, this might take some time. Consider selecting the relevant variables during loading"
-            )
+    names = list(ds.attrs["variables"])
+    if variables is None:
+        variables = [name for name in names if name not in DROP_VARS]
+    elif isinstance(variables, str):
+        variables = [variables]
+    missing = [name for name in variables if name not in names]
+    if missing:
+        raise ValueError(f"Variables {missing} not found in {path}")
 
-    ds_final = ds_selected.to_dataset(dim="variable")
-    ds_final.attrs[TIME_TRAIT_ATTR] = Time.OBSERVATION
-    ds_final.attrs[SPACE_TRAIT_ATTR] = Space.GRID
-    ds_final.attrs[UNCERTAINTY_TRAIT_ATTR] = Uncertainty.DETERMINISTIC
-    return ds_final
+    dates = pd.DatetimeIndex(ds["dates"].values.astype("datetime64[ns]"))
+    time_slice = slice(None)
+    if valid_times is not None:
+        time_slice = dates.slice_indexer(valid_times.start, valid_times.stop)
+        if len(dates[time_slice]) == 0:
+            raise ValueError(f"No time steps of {path} within {valid_times}")
 
-
-def _postprocess(dataset: xr.Dataset) -> xr.Dataset:
-    """Post-process the dataset to add coordinates and drop unused variables.
-
-    Parameters
-    ----------
-    dataset : xr.Dataset
-        The input dataset to be processed.
-
-    Returns
-    -------
-    xr.Dataset
-        The processed dataset with assigned coordinates and attributes.
-    """
-
-    # Add coordinates
-    coords = {
-        key: dataset[value].astype("datetime64[ns]").load()
-        if key == "valid_time"
-        else dataset[value].load()
-        for key, value in COORDS.items()
+    # Keep the full variable axis and select ensemble member 0 with an integer:
+    # selecting variables with a list would send every read through zarr's
+    # orthogonal indexing, which is about 3x slower and needs 2x the memory.
+    data = (
+        ds["data"]
+        .isel(time=time_slice, ensemble=0)
+        .chunk({"time": ds["data"].encoding["chunks"][0], "variable": -1, "cell": -1})
+        .data
+    )
+    meta = np.empty((0, 0), dtype=data.dtype)
+    data_vars = {
+        name: (
+            ("valid_time", "grid_index"),
+            data.map_blocks(
+                _take_variable,
+                names.index(name),
+                drop_axis=1,
+                meta=meta,
+                token=f"anemoi-{name}",
+            ),
+        )
+        for name in variables
     }
-    for key in ("latitude", "longitude"):
-        coords[key] = coords[key].astype(np.float32)
+    coords = {
+        "valid_time": (
+            "valid_time",
+            dates[time_slice].values,
+            {"standard_name": "time"},
+        ),
+        "latitude": (
+            "grid_index",
+            ds["latitudes"].values.astype(np.float32),
+            {"standard_name": "latitude", "units": "degrees_north"},
+        ),
+        "longitude": (
+            "grid_index",
+            ds["longitudes"].values.astype(np.float32),
+            {"standard_name": "longitude", "units": "degrees_east"},
+        ),
+    }
 
-    coords["variable"] = dataset.attrs["variables"]
-    coords["valid_time"] = coords["valid_time"].astype("datetime64[ns]")
-    ds_coords = dataset.assign_coords(coords)
+    ds_out = xr.Dataset(data_vars, coords=coords)
+    ds_out.attrs[TIME_TRAIT_ATTR] = Time.OBSERVATION
+    ds_out.attrs[SPACE_TRAIT_ATTR] = Space.GRID
+    ds_out.attrs[UNCERTAINTY_TRAIT_ATTR] = Uncertainty.DETERMINISTIC
+    return ds_out
 
-    # Drop unused variables and remove ensemble dimension
-    drop_vars = [var for var in DROP_VARS if var in coords["variable"]]
 
-    ds_pruned = (
-        ds_coords["data"]
-        .isel(ensemble=0)
-        .drop_sel(variable=drop_vars)
-        .swap_dims({"time": "valid_time"})
-        .rename({"cell": "grid_index"})
-    )
+def _take_variable(block: np.ndarray, index: int) -> np.ndarray:
+    """Return one variable of a ``(time, variable, cell)`` block.
 
-    ds_pruned.coords["valid_time"].attrs["standard_name"] = "time"
-    ds_pruned.coords["latitude"].attrs.update(
-        {"standard_name": "latitude", "units": "degrees_north"}
-    )
-    ds_pruned.coords["longitude"].attrs.update(
-        {"standard_name": "longitude", "units": "degrees_east"}
-    )
-
-    return ds_pruned  # type: ignore
+    The copy lets the block holding all variables be freed as soon as the
+    variables needed from it are taken, instead of living as long as a view.
+    """
+    return block[:, index].copy()

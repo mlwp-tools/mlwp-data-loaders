@@ -48,6 +48,8 @@ ds = load_and_validate_dataset(
     "s3://my-bucket/dataset.zarr",
     loader="mlwp_data_loaders.loaders.anemoi.anemoi_datasets",
     storage_options={"anon": True},
+    variables=["2t", "msl"],  # optional, defaults to all non-forcing variables
+    valid_times=slice("2020-01-01", "2020-12-31"),  # optional, defaults to the full record
 )
 ```
 

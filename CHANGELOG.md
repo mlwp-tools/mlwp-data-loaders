@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- `valid_times` argument (label slice) in the `anemoi-datasets` loader to load part of the record. @michielv
+
+### Changed
+- The `anemoi-datasets` loader builds a dask graph whose size no longer depends on the length of the record: all variables are split lazily from one shared read, so each on-disk chunk is read once per compute, using zarr's fast basic-indexing path. **Breaking:** the `chunks` argument is removed; dask chunks follow the store's on-disk time chunks. @michielv
+- `dask` is now a required dependency. @michielv
+
 ## [0.1.0](https://github.com/mlwp-tools/mlwp-data-loaders/releases/tag/v0.1.0)
 
 First release of `mlwp-data-loaders`, a package for loading raw MLWP source
