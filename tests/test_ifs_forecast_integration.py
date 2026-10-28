@@ -73,13 +73,14 @@ def test_load_dataset_opens_ifs_grib(
     ds, report_specs = load_and_validate_dataset(  # type: ignore
         paths,
         loader=LOADER,
-        chunks=None,
         return_validation_report=True,
     )
 
     assert ds.attrs[TIME_TRAIT_ATTR] == "forecast"
     assert ds.attrs[SPACE_TRAIT_ATTR] == "grid"
     assert ds.attrs[UNCERTAINTY_TRAIT_ATTR] == expected_uncertainty
+    if expected_uncertainty == "ensemble":
+        assert all(var.dims[0] == "member" for var in ds.data_vars.values())
 
     if report_specs.has_fails():
         report_specs.console_print()
