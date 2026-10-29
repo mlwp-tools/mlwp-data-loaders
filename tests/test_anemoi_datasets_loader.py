@@ -40,6 +40,7 @@ def _write_store(path, time_chunk: int = 1) -> np.ndarray:
 
 @pytest.fixture
 def store(tmp_path) -> tuple[str, np.ndarray]:
+    """Write a small anemoi-datasets store and return its path and data."""
     path = str(tmp_path / "anemoi.zarr")
     return path, _write_store(path)
 

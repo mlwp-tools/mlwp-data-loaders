@@ -67,7 +67,6 @@ def test_load_dataset_opens_ifs_grib(
     download_grib_files, files, expected_uncertainty
 ) -> None:
     """The IFS forecast loader can open and validate GRIB files."""
-
     paths = download_grib_files(files)
 
     ds, report_specs = load_and_validate_dataset(  # type: ignore

@@ -17,6 +17,7 @@ record and of the number of variables, this loader
 
 from typing import Any
 
+import dask.array
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -86,6 +87,12 @@ def load_dataset(
     xr.Dataset
         ``(valid_time, grid_index)`` variables with latitude/longitude
         coordinates and the mlwp trait attributes.
+
+    Raises
+    ------
+    ValueError
+        If any of ``variables`` is not in the dataset, or no time steps fall
+        within ``valid_times``.
     """
     # No dask yet: indexing the backend arrays below only composes an indexer
     ds = xr.open_zarr(
@@ -96,12 +103,13 @@ def load_dataset(
         **kwargs,
     )  # type: ignore
 
-    names = list(ds.attrs["variables"])
+    # all variables in the store, in the order of its `variable` axis
+    available_variable_names = list(ds.attrs["variables"])
     if variables is None:
-        variables = [name for name in names if name not in DROP_VARS]
+        variables = [name for name in available_variable_names if name not in DROP_VARS]
     elif isinstance(variables, str):
         variables = [variables]
-    missing = [name for name in variables if name not in names]
+    missing = [name for name in variables if name not in available_variable_names]
     if missing:
         raise ValueError(f"Variables {missing} not found in {path}")
 
@@ -112,29 +120,48 @@ def load_dataset(
         if len(dates[time_slice]) == 0:
             raise ValueError(f"No time steps of {path} within {valid_times}")
 
-    # Keep the full variable axis and select ensemble member 0 with an integer:
-    # selecting variables with a list would send every read through zarr's
-    # orthogonal indexing, which is about 3x slower and needs 2x the memory.
-    data = (
+    # Create one lazy (time, variable, cell) dask array that all the
+    # per-variable arrays below are taken from, so computing several variables
+    # reads and decodes each on-disk chunk only once rather than once per
+    # variable. Each dask chunk is exactly one on-disk chunk: smaller would
+    # decode a zarr chunk several times, larger would hold several time steps
+    # of all variables in memory per task.
+    # All variables are kept, since an on-disk chunk holds all of them and
+    # selecting some would read no less; indexing `variable` with a list (or
+    # `ensemble` with anything but an integer) would also switch every read to
+    # zarr's orthogonal indexing, about 3x slower and needing 2x the memory.
+    store_data: dask.array.Array = (
         ds["data"]
         .isel(time=time_slice, ensemble=0)
-        .chunk({"time": ds["data"].encoding["chunks"][0], "variable": -1, "cell": -1})
+        .chunk(
+            {
+                "time": ds["data"].encoding["chunks"][0],  # on-disk chunk
+                "variable": -1,  # all variables in one chunk
+                "cell": -1,  # the whole grid in one chunk
+            }
+        )
         .data
     )
-    meta = np.empty((0, 0), dtype=data.dtype)
-    data_vars = {
-        name: (
-            ("valid_time", "grid_index"),
-            data.map_blocks(
-                _take_variable,
-                names.index(name),
-                drop_axis=1,
-                meta=meta,
-                token=f"anemoi-{name}",
-            ),
+    # Split `store_data` into one lazy (valid_time, grid_index) array per
+    # variable. Each is a single dask layer that calls _extract_variable_array
+    # on every chunk of `store_data`, so computing several variables still
+    # reads each on-disk chunk only once.
+    # `empty_result` is an empty array of the result's type, dtype and number
+    # of dims, so dask need not call _extract_variable_array to find them out
+    empty_result: np.ndarray = np.empty((0, 0), dtype=store_data.dtype)
+    data_vars: dict[str, tuple[tuple[str, str], dask.array.Array]] = {}
+    for name in variables:
+        # position of the variable along the store's `variable` axis
+        index = available_variable_names.index(name)
+        variable_data: dask.array.Array = store_data.map_blocks(
+            _extract_variable_array,
+            index,
+            drop_axis=1,  # the variable axis is not in the result
+            meta=empty_result,
+            token=f"anemoi-{name}",  # stable, readable name for the layer
         )
-        for name in variables
-    }
+        data_vars[name] = (("valid_time", "grid_index"), variable_data)
+
     coords = {
         "valid_time": (
             "valid_time",
@@ -160,10 +187,27 @@ def load_dataset(
     return ds_out
 
 
-def _take_variable(block: np.ndarray, index: int) -> np.ndarray:
-    """Return one variable of a ``(time, variable, cell)`` block.
+def _extract_variable_array(array: np.ndarray, index: int) -> np.ndarray:
+    """Extract one variable from a ``(time, variable, cell)`` array.
 
-    The copy lets the block holding all variables be freed as soon as the
-    variables needed from it are taken, instead of living as long as a view.
+    ``map_blocks`` calls this once per chunk of the dask array, with that
+    chunk's values as a numpy array (what dask calls a block): one on-disk
+    time chunk (usually one time step) of all variables on the whole grid.
+
+    The copy lets the array holding all variables be freed as soon as the
+    variables needed from it are extracted, instead of living as long as a
+    view.
+
+    Parameters
+    ----------
+    array : np.ndarray
+        ``(time, variable, cell)`` values of one chunk.
+    index : int
+        Position of the variable along the ``variable`` axis.
+
+    Returns
+    -------
+    np.ndarray
+        ``(time, cell)`` copy of the variable's values.
     """
-    return block[:, index].copy()
+    return array[:, index].copy()

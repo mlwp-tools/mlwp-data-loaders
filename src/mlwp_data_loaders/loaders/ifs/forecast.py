@@ -82,6 +82,13 @@ def load_dataset(
     xr.Dataset
         ``([member,] reference_time, lead_time, grid_index)`` variables with
         latitude/longitude coordinates and the mlwp trait attributes.
+
+    Raises
+    ------
+    TypeError
+        If ``chunks`` is passed (no longer supported).
+    ValueError
+        If any of ``variables`` is not in the most common file layout.
     """
     if "chunks" in kwargs:
         raise TypeError(
@@ -160,6 +167,22 @@ def _open_forecast(path: str, variables: list[str] | None, **kwargs: Any) -> xr.
     ``lead_time`` can be scalar here; ``_chunk`` adds them back. A scalar
     ``number`` is kept for a single ensemble member, which becomes a scalar
     ``member`` coordinate, and dropped otherwise (e.g. for HRES).
+
+    Parameters
+    ----------
+    path : str
+        Path to the GRIB file.
+    variables : list of str or None
+        Variables to keep, by their cfgrib names; all if None. Names not in
+        the file are ignored.
+    **kwargs
+        Additional keyword arguments passed to ``xr.open_dataset``.
+
+    Returns
+    -------
+    xr.Dataset
+        The file's variables with ``reference_time``, ``lead_time`` and
+        ``grid_index`` dims (the first two possibly scalar).
     """
     ds = xr.open_dataset(path, engine="cfgrib", **kwargs)
     # valid_time is reference_time + lead_time; mxalign derives it when needed
@@ -178,7 +201,19 @@ def _open_forecast(path: str, variables: list[str] | None, **kwargs: Any) -> xr.
 
 
 def _layout(ds: xr.Dataset) -> tuple:
-    """Return what must match between files to concatenate them."""
+    """Return what must match between files to concatenate them.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        One file, as returned by ``_open_forecast``.
+
+    Returns
+    -------
+    tuple
+        The lead times, the member numbers (empty if none), the number of
+        grid points and the sorted variable names.
+    """
     members = tuple(np.atleast_1d(ds["number"].values)) if "number" in ds.coords else ()
     return (
         tuple(np.atleast_1d(ds["lead_time"].values)),
@@ -189,7 +224,19 @@ def _layout(ds: xr.Dataset) -> tuple:
 
 
 def _describe(layout: tuple) -> str:
-    """Describe a file layout from ``_layout`` for a log message."""
+    """Describe a file layout from ``_layout`` for a log message.
+
+    Parameters
+    ----------
+    layout : tuple
+        Layout returned by ``_layout``.
+
+    Returns
+    -------
+    str
+        The number of lead times and grid points, the members and the
+        variables.
+    """
     lead_times, members, n_grid, names = layout
     return (
         f"{len(lead_times)} lead times, members {list(members)}, "
@@ -201,6 +248,16 @@ def _field_chunks(ds: xr.Dataset) -> dict[str, int]:
     """Return chunk sizes of one lead time, whole fields and as many members as fit.
 
     Members are grouped up to dask's ``array.chunk-size``.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        One file, as returned by ``_open_forecast``.
+
+    Returns
+    -------
+    dict of str to int
+        Chunk size of each dim, ``-1`` for the whole of ``grid_index``.
     """
     chunks = {"reference_time": 1, "lead_time": 1, "grid_index": -1}
     if "number" in ds.dims:
@@ -216,6 +273,19 @@ def _chunk(ds: xr.Dataset, chunks: dict[str, int]) -> xr.Dataset:
 
     The dims are added after chunking because expanding a variable that is
     not yet a dask array reads all of it.
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        One file, as returned by ``_open_forecast``.
+    chunks : dict of str to int
+        Chunk size of each dim, as returned by ``_field_chunks``.
+
+    Returns
+    -------
+    xr.Dataset
+        The file's dask-backed variables with length-one ``reference_time``
+        and ``lead_time`` dims, without latitude/longitude.
     """
     ds = ds.drop_vars(["latitude", "longitude"])
     ds = ds.chunk({dim: size for dim, size in chunks.items() if dim in ds.dims})

@@ -99,6 +99,16 @@ def load_dataset(
     xr.Dataset
         ``(valid_time, point_index)`` variables with ``code``, latitude,
         longitude and altitude coordinates and the mlwp trait attributes.
+
+    Raises
+    ------
+    NotImplementedError
+        If more than one path is given.
+    FileNotFoundError
+        If the SQLite file does not exist.
+    ValueError
+        If the file has no observation table, the table is empty, or any of
+        ``variables`` is not a column of it.
     """
     if isinstance(paths, list):
         if len(paths) > 1:
@@ -195,6 +205,16 @@ def _connect(path: str) -> Iterator[sqlite3.Connection]:
 
     ``sqlite3.connect(path)`` would create an empty database for a missing
     file, and its context manager only ends a transaction, it doesn't close.
+
+    Parameters
+    ----------
+    path : str
+        Path to the SQLite file.
+
+    Yields
+    ------
+    sqlite3.Connection
+        Read-only connection to the file.
     """
     conn = sqlite3.connect(f"{Path(path).absolute().as_uri()}?mode=ro", uri=True)
     try:
@@ -206,8 +226,17 @@ def _connect(path: str) -> Iterator[sqlite3.Connection]:
 def _time_chunks(n_times: int, values_per_time: int) -> tuple[int, ...]:
     """Split ``n_times`` valid times into equal chunks of dask's ``array.chunk-size``.
 
-    ``values_per_time`` is the number of values one valid time holds: all
-    variables at all stations.
+    Parameters
+    ----------
+    n_times : int
+        Number of valid times to split.
+    values_per_time : int
+        Number of values one valid time holds: all variables at all stations.
+
+    Returns
+    -------
+    tuple of int
+        Number of valid times in each chunk, differing by at most one.
     """
     limit = parse_bytes(dask.config.get("array.chunk-size"))
     per_chunk = max(1, limit // (8 * max(1, values_per_time)))
@@ -217,7 +246,18 @@ def _time_chunks(n_times: int, values_per_time: int) -> tuple[int, ...]:
 
 
 def _quote(name: str) -> str:
-    """Quote ``name`` as an SQL identifier."""
+    """Quote ``name`` as an SQL identifier.
+
+    Parameters
+    ----------
+    name : str
+        Table or column name.
+
+    Returns
+    -------
+    str
+        ``name`` in double quotes, with any double quotes in it doubled.
+    """
     return '"' + name.replace('"', '""') + '"'
 
 
@@ -228,6 +268,21 @@ def _read_block(
 
     Values missing from the table, either NULL or without a row for that
     station and valid time, are NaN.
+
+    Parameters
+    ----------
+    block : np.ndarray
+        Object array holding one ``(path, times)`` pair: the SQLite file and
+        the sorted valid times (as stored in ``validdate``) of the chunk.
+    variables : list of str
+        Columns of the observation table to read.
+    codes : np.ndarray
+        Sorted station codes (``SID``), giving the order of the station axis.
+
+    Returns
+    -------
+    np.ndarray
+        ``(valid_time, variable, station)`` float64 block.
     """
     path, times = block[0]
     columns = ", ".join(_quote(name) for name in ["validdate", "SID", *variables])
@@ -248,5 +303,17 @@ def _take_variable(block: np.ndarray, index: int) -> np.ndarray:
 
     The copy lets the block holding all variables be freed as soon as the
     variables needed from it are taken, instead of living as long as a view.
+
+    Parameters
+    ----------
+    block : np.ndarray
+        ``(valid_time, variable, station)`` block holding all variables.
+    index : int
+        Position of the variable along the ``variable`` axis.
+
+    Returns
+    -------
+    np.ndarray
+        ``(valid_time, station)`` copy of the variable's values.
     """
     return block[:, index].copy()

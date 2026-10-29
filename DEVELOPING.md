@@ -45,6 +45,16 @@ Then run the hooks locally with:
 pre-commit run --all-files
 ```
 
+Docstrings follow the [numpy
+convention](https://numpydoc.readthedocs.io/en/latest/format.html), checked in
+`src/` by numpydoc's `numpydoc-validation` hook (configured under
+`[tool.numpydoc_validation]` in `pyproject.toml`). Every function, private
+ones included, documents its parameters and return value; the extended
+summary, `See Also` and `Examples` sections are optional. A single check can be
+skipped for one object with a `# numpydoc ignore=<code>` comment on its `def`
+line. numpydoc does not check `Raises` sections against the function body, so
+keep them up to date by hand.
+
 You can also install the git hook so checks run before each commit:
 
 ```bash

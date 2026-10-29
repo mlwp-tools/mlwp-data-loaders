@@ -70,6 +70,11 @@ def load_dataset(
     xr.Dataset
         ``(reference_time, lead_time, grid_index)`` variables with
         latitude/longitude coordinates and the mlwp trait attributes.
+
+    Raises
+    ------
+    ValueError
+        If any of ``variables`` is not a gridded variable of the files.
     """
     paths = [paths] if isinstance(paths, str) else list(paths)
     if isinstance(variables, str):
@@ -161,7 +166,20 @@ def load_dataset(
 
 @contextlib.contextmanager
 def _open(path: str, storage_options: dict[str, Any] | None) -> Iterator[h5netcdf.File]:
-    """Open a NetCDF file with h5netcdf, through fsspec for remote paths."""
+    """Open a NetCDF file with h5netcdf, through fsspec for remote paths.
+
+    Parameters
+    ----------
+    path : str
+        Local path or URL (e.g. ``s3://``) of the file.
+    storage_options : dict or None
+        Options passed to ``fsspec.open`` for remote paths.
+
+    Yields
+    ------
+    h5netcdf.File
+        The file, open for reading.
+    """
     if fsspec.utils.get_protocol(path) == "file":
         with h5netcdf.File(path, "r") as f:
             yield f
@@ -176,7 +194,20 @@ def _decode(
 ) -> xr.Variable:
     """Apply CF decoding (fill values, scale/offset, times) the way xarray does.
 
-    Reads all of ``var`` unless ``values`` are given.
+    Parameters
+    ----------
+    name : str
+        Name of the variable.
+    var : h5netcdf.Variable
+        Variable whose dimensions and attributes are used.
+    values : np.ndarray, optional
+        Values to decode in place of the variable's; all of ``var`` is read
+        if not given.
+
+    Returns
+    -------
+    xr.Variable
+        The decoded variable.
     """
     raw = xr.Variable(
         var.dimensions, var[...] if values is None else values, dict(var.attrs)
@@ -191,6 +222,20 @@ def _read_variable(
 
     h5netcdf pads variables shorter than the unlimited time dimension, such as
     constant fields written at the first step only, with their fill value.
+
+    Parameters
+    ----------
+    path_block : np.ndarray
+        One-element array holding the path of the file.
+    name : str
+        Name of the variable to read.
+    storage_options : dict or None
+        Options passed to ``fsspec.open`` for remote paths.
+
+    Returns
+    -------
+    np.ndarray
+        ``(1, time, values)`` block of the decoded values.
     """
     with _open(str(path_block[0]), storage_options) as f:
         values = _decode(name, f.variables[name]).values

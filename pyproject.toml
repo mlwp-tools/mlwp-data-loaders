@@ -50,6 +50,10 @@ markers = [
     "network: marks tests that require network access (e.g. fetching sample data from object storage)",
 ]
 
+[tool.numpydoc_validation]
+# all checks except extended summary, See Also and Examples sections
+checks = ["all", "ES01", "SA01", "EX01"]
+
 [tool.uv.sources]
 mlwp-data-specs = { git = "https://github.com/mlwp-tools/mlwp-data-specs", rev = "059f382" }
 
