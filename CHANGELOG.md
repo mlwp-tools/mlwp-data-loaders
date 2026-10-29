@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- numpy-style docstrings are enforced in `src/` with numpydoc's `numpydoc-validation` pre-commit hook. [\#32](https://github.com/mlwp-tools/mlwp-data-loaders/pull/32), @leifdenby
 - `mlwp_data_loaders.ensemble.apply_member_conventions`: renames an ensemble's member coordinate to `member`, casts its labels to integers, sets the CF `realization` attributes and makes it the leading dimension. Loaders that return ensembles call it last. @mpvginde
 - `variables` argument in the IFS forecast loader. @mpvginde
 - `variables` argument in the `anemoi-inference` loader to load a subset of the variables. @mpvginde

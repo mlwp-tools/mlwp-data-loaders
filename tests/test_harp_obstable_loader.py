@@ -50,6 +50,7 @@ def _rows() -> pd.DataFrame:
 
 @pytest.fixture
 def rows() -> pd.DataFrame:
+    """Return the observation rows written to the test table."""
     return _rows()
 
 
@@ -148,6 +149,7 @@ def test_load_dataset_selects_variables(obstable, rows) -> None:
 
 
 def test_load_dataset_raises_on_unknown_variable(obstable) -> None:
+    """Unknown variables are reported, matched case-sensitively."""
     with pytest.raises(ValueError, match=r"\['t2m'\] not found"):
         load_dataset(obstable, variables=["T2m", "t2m"])
 

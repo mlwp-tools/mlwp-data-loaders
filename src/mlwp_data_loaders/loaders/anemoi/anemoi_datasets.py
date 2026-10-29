@@ -86,6 +86,12 @@ def load_dataset(
     xr.Dataset
         ``(valid_time, grid_index)`` variables with latitude/longitude
         coordinates and the mlwp trait attributes.
+
+    Raises
+    ------
+    ValueError
+        If any of ``variables`` is not in the dataset, or no time steps fall
+        within ``valid_times``.
     """
     # No dask yet: indexing the backend arrays below only composes an indexer
     ds = xr.open_zarr(
@@ -165,5 +171,17 @@ def _take_variable(block: np.ndarray, index: int) -> np.ndarray:
 
     The copy lets the block holding all variables be freed as soon as the
     variables needed from it are taken, instead of living as long as a view.
+
+    Parameters
+    ----------
+    block : np.ndarray
+        ``(time, variable, cell)`` block holding all variables.
+    index : int
+        Position of the variable along the ``variable`` axis.
+
+    Returns
+    -------
+    np.ndarray
+        ``(time, cell)`` copy of the variable's values.
     """
     return block[:, index].copy()

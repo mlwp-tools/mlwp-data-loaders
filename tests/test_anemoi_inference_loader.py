@@ -60,11 +60,13 @@ def _write_forecast(
 
 @pytest.fixture
 def paths(tmp_path) -> list[str]:
+    """Write one anemoi-inference forecast file per reference time."""
     return [_write_forecast(tmp_path / f"{t:%Y%m%d%H}.nc", t) for t in REFERENCE_TIMES]
 
 
 @pytest.fixture
 def warnings():
+    """Collect the messages of warnings logged with loguru."""
     messages = []
     sink = logger.add(messages.append, level="WARNING", format="{message}")
     yield messages
